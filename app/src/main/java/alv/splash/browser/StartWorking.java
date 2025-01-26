@@ -52,7 +52,10 @@ public class StartWorking extends AppCompatActivity {
 
     String KBEarn = "https://kolotibablo.com";
     ValueCallback<Uri[]> filePathCallback;
-    String getUrl1, getUrl2, pageTitle1, pageTitle2;
+    String getUrl1 = "";
+    String getUrl2 ="";
+    String pageTitle1 ="";
+    String pageTitle2 = "";
     private static final int FILE_CHOOSER_REQUEST_CODE = 100;
     FloatingActionButton fabControl;
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
@@ -66,6 +69,7 @@ public class StartWorking extends AppCompatActivity {
     GeckoSession sessionGecko;
     boolean canGoBack = false;
 
+    BottomSheetDialog bottomSheetDialog;
 
 
     // Buat instance UrlValidator
@@ -91,21 +95,140 @@ public class StartWorking extends AppCompatActivity {
         pBarTab1 = findViewById(R.id.pBarTab1);
         pBarTab2 = findViewById(R.id.pBarTab2);
 
-        View bottomSheetView = LayoutInflater.from(this).inflate(
-                R.layout.sw_bottomsheet_control, null);
+        bottomSheetDialog = new BottomSheetDialog(this);
+        bottomSheetDialog.setContentView(R.layout.sw_bottomsheet_control);
+        bottomSheetDialog.setCancelable(true);
+        bottomSheetDialog.setCanceledOnTouchOutside(true);
 
-        titleTab1 = bottomSheetView.findViewById(R.id.titleTab1);
-        titleTab2 = bottomSheetView.findViewById(R.id.titleTab2);
+        titleTab1 = bottomSheetDialog.findViewById(R.id.titleTab1);
+        titleTab2 = bottomSheetDialog.findViewById(R.id.titleTab2);
+        pageSecure1 = bottomSheetDialog.findViewById(R.id.pageSecure1);
+        pageSecure2 = bottomSheetDialog.findViewById(R.id.pageSecure2);
+        refreshTab1 = bottomSheetDialog.findViewById(R.id.refreshTab1);
+        refreshTab2 = bottomSheetDialog.findViewById(R.id.refreshTab2);
+        etLayout1 = bottomSheetDialog.findViewById(R.id.etLayout1);
+        etLayout2 = bottomSheetDialog.findViewById(R.id.etLayout2);
+        etSearch1 = bottomSheetDialog.findViewById(R.id.et_search1);
+        etSearch2 = bottomSheetDialog.findViewById(R.id.et_search2);
 
-        pageSecure1 = bottomSheetView.findViewById(R.id.pageSecure1);
-        pageSecure2 = bottomSheetView.findViewById(R.id.pageSecure2);
-        refreshTab1 = bottomSheetView.findViewById(R.id.refreshTab1);
-        refreshTab2 = bottomSheetView.findViewById(R.id.refreshTab2);
 
-        etLayout1 = bottomSheetView.findViewById(R.id.etLayout1);
-        etLayout2 = bottomSheetView.findViewById(R.id.etLayout2);
-        etSearch1 = bottomSheetView.findViewById(R.id.et_search1);
-        etSearch2 = bottomSheetView.findViewById(R.id.et_search2);
+        //BottomSheetDialog
+        bottomSheetDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface dialog) {
+                BottomSheetDialog d = (BottomSheetDialog) dialog;
+                View bottomSheetInternal = d.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+                if (bottomSheetInternal != null) {
+                    BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bottomSheetInternal);
+                    behavior.setState(BottomSheetBehavior.STATE_EXPANDED); // Munculkan dalam mode penuh
+                }
+            }
+        });
+
+        // Listener untuk mendeteksi saat dialog ditutup
+        bottomSheetDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                // Ubah visibilitas saat dialog ditutup
+                etLayout1.setVisibility(View.GONE);
+                etLayout2.setVisibility(View.GONE);
+
+                pageSecure1.setVisibility(View.VISIBLE);
+                titleTab1.setVisibility(View.VISIBLE);
+                refreshTab1.setVisibility(View.VISIBLE);
+
+                pageSecure2.setVisibility(View.VISIBLE);
+                titleTab2.setVisibility(View.VISIBLE);
+                refreshTab2.setVisibility(View.VISIBLE);
+
+            }
+        });
+
+        titleTab1.setOnClickListener(v -> switchViewSearch1());
+        titleTab2.setOnClickListener(v -> switchViewSearch2());
+
+        // Event saat tombol enter ditekan
+        etSearch1.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                String userInput = etSearch1.getText().toString();
+                String processedUrl = urlValidator.processInput(userInput);
+
+                // Memuat URL yang sudah diproses ke WebView
+                webViewTab1.loadUrl(processedUrl);
+
+                // Sembunyikan keyboard
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(etSearch1.getWindowToken(), 0);
+                return true;
+            }
+            return false;
+        });
+        // Event saat tombol enter ditekan
+        etSearch2.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                String userInput = etSearch2.getText().toString();
+                String processedUrl = urlValidator.processInput(userInput);
+
+                // Memuat URL yang sudah diproses ke WebView
+                sessionGecko.loadUri(processedUrl);
+
+                // Sembunyikan keyboard
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(etSearch2.getWindowToken(), 0);
+                return true;
+            }
+            return false;
+        });
+        // Event saat kehilangan fokus
+        etSearch1.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                etLayout1.setVisibility(View.GONE);
+
+                pageSecure1.setVisibility(View.VISIBLE);
+                titleTab1.setVisibility(View.VISIBLE);
+                refreshTab1.setVisibility(View.VISIBLE);
+            }
+        });
+
+        // Event saat kehilangan fokus
+        etSearch2.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                etLayout2.setVisibility(View.GONE);
+
+                pageSecure2.setVisibility(View.VISIBLE);
+                titleTab2.setVisibility(View.VISIBLE);
+                refreshTab2.setVisibility(View.VISIBLE);
+            }
+        });
+
+        if (pageTitle1.length() > 6) {
+            // Judul memiliki lebih dari 10 karakter, atur animasi marquee
+            titleTab1.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+            titleTab1.setMarqueeRepeatLimit(-1);
+            titleTab1.setSelected(true);
+        } else {
+            // Judul memiliki 10 karakter atau kurang, nonaktifkan animasi marquee
+            titleTab1.setEllipsize(TextUtils.TruncateAt.END);
+            titleTab1.setSelected(false);
+        }
+
+        if (pageTitle2.length() > 6) {
+            // Judul memiliki lebih dari 10 karakter, atur animasi marquee
+            titleTab2.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+            titleTab2.setMarqueeRepeatLimit(-1);
+            titleTab2.setSelected(true);
+        } else {
+            // Judul memiliki 10 karakter atau kurang, nonaktifkan animasi marquee
+            titleTab2.setEllipsize(TextUtils.TruncateAt.END);
+            titleTab2.setSelected(false);
+        }
+
+        refreshTab1.setOnClickListener(v -> webViewTab1.reload());
+        refreshTab2.setOnClickListener(v -> sessionGecko.reload());
+        //End BottomsheetDialog
+
+
+
 
 
         viewGecko = findViewById(R.id.webTab2);
@@ -133,6 +256,11 @@ public class StartWorking extends AppCompatActivity {
 
     }// akhir onCreate
 
+    private void showKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+    }
+
     @Override
     public void onBackPressed() {
         // Cek apakah WebView terlihat (visible) dan mendapatkan fokus
@@ -142,10 +270,11 @@ public class StartWorking extends AppCompatActivity {
             } else {
                 webViewTab1.clearCache(false);
                 webViewTab1.clearFocus();
+                viewGecko.clearFocus();
                // webViewTab1.setVisibility(View.GONE);
                 //Menonaktifkan WebView
                // webViewCSP.setEnabled(false);
-                super.onBackPressed();
+
                 showExitConfirmationDialog();
             }
         } else {
@@ -157,7 +286,7 @@ public class StartWorking extends AppCompatActivity {
                 sessionGecko.goBack();
             } else {
                 viewGecko.clearFocus();
-                super.onBackPressed();
+                webViewTab1.clearFocus();
                 showExitConfirmationDialog();
             }
         } else {
@@ -252,118 +381,19 @@ public class StartWorking extends AppCompatActivity {
     }
 
     private void showBottomSheet() {
-        // Inflate ulang layout setiap kali FAB ditekan
-        View bottomSheetView = LayoutInflater.from(this).inflate(
-                R.layout.sw_bottomsheet_control, null);
 
-        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
-        bottomSheetDialog.setContentView(bottomSheetView);
-
+        /*
         LinearLayout rootBsSW = bottomSheetView.findViewById(R.id.rootBottomsheetSW);
 
         BottomSheetBehavior behaviorBsSW = BottomSheetBehavior.from(rootBsSW);
 
         behaviorBsSW.setState(BottomSheetBehavior.STATE_EXPANDED);
-
-        titleTab1 = bottomSheetView.findViewById(R.id.titleTab1);
-        titleTab2 = bottomSheetView.findViewById(R.id.titleTab2);
-
-        pageSecure1 = bottomSheetView.findViewById(R.id.pageSecure1);
-        pageSecure2 = bottomSheetView.findViewById(R.id.pageSecure2);
-        refreshTab1 = bottomSheetView.findViewById(R.id.refreshTab1);
-        refreshTab2 = bottomSheetView.findViewById(R.id.refreshTab2);
-
-        etLayout1 = bottomSheetView.findViewById(R.id.etLayout1);
-        etLayout2 = bottomSheetView.findViewById(R.id.etLayout2);
-        etSearch1 = bottomSheetView.findViewById(R.id.et_search1);
-        etSearch2 = bottomSheetView.findViewById(R.id.et_search2);
-
-        titleTab1.setOnClickListener(v -> switchViewSearch1());
-        titleTab2.setOnClickListener(v -> switchViewSearch2());
-
-        // Event saat tombol enter ditekan
-        etSearch1.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
-                String userInput = etSearch1.getText().toString();
-                String processedUrl = urlValidator.processInput(userInput);
-
-                // Memuat URL yang sudah diproses ke WebView
-                webViewTab1.loadUrl(processedUrl);
-
-                // Sembunyikan keyboard
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(etSearch1.getWindowToken(), 0);
-                return true;
-            }
-            return false;
-        });
-        // Event saat tombol enter ditekan
-        etSearch2.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
-                String userInput = etSearch2.getText().toString();
-                String processedUrl = urlValidator.processInput(userInput);
-
-                // Memuat URL yang sudah diproses ke WebView
-                sessionGecko.loadUri(processedUrl);
-
-                // Sembunyikan keyboard
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(etSearch2.getWindowToken(), 0);
-                return true;
-            }
-            return false;
-        });
-        // Event saat kehilangan fokus
-        etSearch1.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus) {
-                etLayout1.setVisibility(View.GONE);
-
-                pageSecure1.setVisibility(View.VISIBLE);
-                titleTab1.setVisibility(View.VISIBLE);
-                refreshTab1.setVisibility(View.VISIBLE);
-            }
-        });
-
-        // Event saat kehilangan fokus
-        etSearch2.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus) {
-                etLayout2.setVisibility(View.GONE);
-
-                pageSecure2.setVisibility(View.VISIBLE);
-                titleTab2.setVisibility(View.VISIBLE);
-                refreshTab2.setVisibility(View.VISIBLE);
-            }
-        });
+        */
 
         etSearch1.setText(getUrl1);
         etSearch2.setText(getUrl2);
         titleTab1.setText(pageTitle1);
         titleTab2.setText(pageTitle2);
-        if (pageTitle1.length() > 6) {
-            // Judul memiliki lebih dari 10 karakter, atur animasi marquee
-            titleTab1.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-            titleTab1.setMarqueeRepeatLimit(-1);
-            titleTab1.setSelected(true);
-        } else {
-            // Judul memiliki 10 karakter atau kurang, nonaktifkan animasi marquee
-            titleTab1.setEllipsize(TextUtils.TruncateAt.END);
-            titleTab1.setSelected(false);
-        }
-
-        if (pageTitle2.length() > 6) {
-            // Judul memiliki lebih dari 10 karakter, atur animasi marquee
-            titleTab2.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-            titleTab2.setMarqueeRepeatLimit(-1);
-            titleTab2.setSelected(true);
-        } else {
-            // Judul memiliki 10 karakter atau kurang, nonaktifkan animasi marquee
-            titleTab2.setEllipsize(TextUtils.TruncateAt.END);
-            titleTab2.setSelected(false);
-        }
-
-        refreshTab1.setOnClickListener(v -> sessionGecko.reload());
-        refreshTab2.setOnClickListener(v -> webViewTab1.reload());
-
 
         bottomSheetDialog.show();
     }
@@ -375,8 +405,10 @@ public class StartWorking extends AppCompatActivity {
         refreshTab1.setVisibility(View.GONE);
 
         etLayout1.setVisibility(View.VISIBLE);
+
         etSearch1.selectAll();
         etSearch1.requestFocus();
+        showKeyboard(etSearch1);
     }
 
     private void switchViewSearch2(){
@@ -385,8 +417,10 @@ public class StartWorking extends AppCompatActivity {
         refreshTab2.setVisibility(View.GONE);
 
         etLayout2.setVisibility(View.VISIBLE);
+
         etSearch2.selectAll();
         etSearch2.requestFocus();
+        showKeyboard(etSearch2);
     }
 
     /*

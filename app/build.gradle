@@ -17,10 +17,19 @@ android {
         minSdk 21
         targetSdk 35
         versionCode 2
-        versionName "2.5"
+        versionName "2.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+    }
+
+    signingConfigs {
+        release {
+            keyAlias 'aan'
+            keyPassword 'alv.<SPLASHBROWSER>'
+            storeFile file('C:\\Users\\Administrator\\AndroidStudioProjects\\SplashBrowser\\alv.jks')
+            storePassword 'alv.<SPLASHBROWSER>'
+        }
     }
 
     buildTypes {
@@ -32,6 +41,8 @@ android {
             ndk {
                 debugSymbolLevel 'none' // Hapus simbol debug untuk file .so
             }
+
+            signingConfig signingConfigs.release
         }
     }
 
