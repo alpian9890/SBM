@@ -10,7 +10,10 @@ import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.text.TextUtils;
+import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -77,6 +80,8 @@ public class StartWorking extends AppCompatActivity {
     float lastX_right, lastY_right, lastX_left, lastY_left;
     ImageView pointerRight, pointerLeft;
     TextView textPointerR, textPointerL;
+
+    private boolean toggleClick = true;
 
     // Buat instance UrlValidator
     private UrlValidator urlValidator = new UrlValidator();
@@ -258,17 +263,6 @@ public class StartWorking extends AppCompatActivity {
         textPointerR = findViewById(R.id.textPointerR);
         textPointerL = findViewById(R.id.textPointerL);
 
-        // Muat posisi pointerRight
-        float[] pointerRightPos = loadPointerPosition("pointerRightX", "pointerRightY");
-        pointerRight.setX(pointerRightPos[0]);
-        pointerRight.setY(pointerRightPos[1]);
-
-        // Muat posisi pointerLeft
-        float[] pointerLeftPos = loadPointerPosition("pointerLeftX", "pointerLeftY");
-        pointerLeft.setX(pointerLeftPos[0]);
-        pointerLeft.setY(pointerLeftPos[1]);
-        setupPointerMovement();
-
         setupWebViewSettings();
         setupWebViewClient();
         setupWebChromeClient();
@@ -276,7 +270,101 @@ public class StartWorking extends AppCompatActivity {
 
         sessionGecko.loadUri(KBEarn); // URL...
 
+        View rootViewSW = findViewById(android.R.id.content);
+        rootViewSW.post(() -> {
+            setupPointerMovement();
+
+            float[] pointerRightPos = loadPointerPosition("pointerRightX", "pointerRightY");
+            pointerRight.setX(Math.max(0, Math.min(pointerRightPos[0], viewGecko.getWidth() - pointerRight.getWidth())));
+            pointerRight.setY(Math.max(0, Math.min(pointerRightPos[1], viewGecko.getHeight() - pointerRight.getHeight())));
+
+            float[] pointerLeftPos = loadPointerPosition("pointerLeftX", "pointerLeftY");
+            pointerLeft.setX(Math.max(0, Math.min(pointerLeftPos[0], webViewTab1.getWidth() - pointerLeft.getWidth())));
+            pointerLeft.setY(Math.max(0, Math.min(pointerLeftPos[1], webViewTab1.getHeight() - pointerLeft.getHeight())));
+        });
+
+
+
     }// akhir onCreate
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+            // Tangani tombol ENTER dengan ACTION_UP
+            performAutoClick();
+            return true;
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
+            // Tangani tombol ENTER dengan ACTION_UP
+            performAutoClick();
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    private void performAutoClick() {
+        View rootView;
+        float x, y;
+
+        if (toggleClick) {
+            // AutoClick untuk pointerRight
+            rootView = viewGecko; // Root view batas pointerRight
+            x = lastX_right;
+            y = lastY_right;
+        } else {
+            // AutoClick untuk pointerLeft
+            rootView = webViewTab1; // Root view batas pointerLeft
+            x = lastX_left;
+            y = lastY_left;
+        }
+
+        toggleClick = !toggleClick; // Toggle untuk pergantian
+
+        simulateTouch(rootView, x, y);
+    }
+
+    private void simulateTouch(View rootView, float x, float y) {
+        // Konversi koordinat ke layar global (jika diperlukan)
+        int[] location = new int[2];
+        rootView.getLocationOnScreen(location);
+        float screenX = location[0] + x;
+        float screenY = location[1] + y;
+
+        // Buat MotionEvent ACTION_DOWN
+        long downTime = SystemClock.uptimeMillis();
+        MotionEvent downEvent = MotionEvent.obtain(
+                downTime,
+                downTime,
+                MotionEvent.ACTION_DOWN,
+                screenX,
+                screenY,
+                0
+        );
+
+        // Buat MotionEvent ACTION_UP
+        long upTime = SystemClock.uptimeMillis();
+        MotionEvent upEvent = MotionEvent.obtain(
+                downTime,
+                upTime,
+                MotionEvent.ACTION_UP,
+                screenX,
+                screenY,
+                0
+        );
+
+        // Kirim event ke rootView
+        rootView.dispatchTouchEvent(downEvent);
+        new Handler().postDelayed(() -> {
+            rootView.dispatchTouchEvent(upEvent);
+        }, 100); // Delay 100ms
+        // Release event
+        downEvent.recycle();
+        new Handler().postDelayed(() -> {
+            upEvent.recycle();
+        }, 70); // Delay 70ms
+    }
+
+
 
     private void showKeyboard(View view) {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -466,69 +554,7 @@ public class StartWorking extends AppCompatActivity {
         showKeyboard(etSearch2);
     }
 
-    /*
-    private void performSearch1(String query) {
-        if (!query.isEmpty()) {
-            // Lakukan pencarian ke Google
-            String searchGoogle = "https://www.google.com/search?q=" + Uri.encode(query);
 
-            if (webViewTab1.getVisibility()==View.GONE){
-                webViewTab1.setVisibility(View.VISIBLE);
-            }
-            if (isURL(query) && !isNotHTTP(query) || isDomain(query) && isNotHTTP(query)) {
-                memuatLink(query, webViewTab1);
-            } else {
-                webViewTab1.loadUrl(searchGoogle);
-            }
-
-        }
-    }
-
-    private void performSearch2 (String query){
-        if (!query.isEmpty()) {
-            String searchGoogle = "https://www.google.com/search?q=" + Uri.encode(query);
-
-            if (viewGecko.getVisibility()==View.GONE){
-                viewGecko.setVisibility(View.VISIBLE);
-            }
-
-            if (isURL(query)){
-
-            }
-        }
-    }
-
-    private boolean isURL(String text) {
-        return text.startsWith("https://");
-    }
-
-    private boolean isNotHTTP (String text) {
-        return !text.startsWith("http://") || !text.startsWith("https://");
-    }
-
-    private boolean isDomain (String text) {
-        return text.contains(".");
-    }*/
-
-    /*
-    private void memuatLink(String link, final WebView targetWebView) {
-        String addressURL = link;
-        if (!link.startsWith("https://")) {
-            addressURL = "https://" + link;
-        } else if (link.startsWith("http://")) {
-            addressURL = link;
-        } else if (link.contains(".") && isNotHTTP(link)) {
-            addressURL = "https://" + link;
-        } else if (link.startsWith("https://"))
-
-
-        setupWebViewSettings();
-        setupWebViewClient();
-        setupWebChromeClient();
-        //setupOnScrollChange();
-        //setupJavascriptInteeface();
-        targetWebView.loadUrl(addressURL);
-    }*/
 
     private void setupWebViewClient() {
 
@@ -698,14 +724,22 @@ public class StartWorking extends AppCompatActivity {
         editor.putFloat(keyX, x);
         editor.putFloat(keyY, y);
         editor.apply();
+
+        // Debugging log
+        Log.d("PointerPrefs", "Saved " + keyX + ": " + x + ", " + keyY + ": " + y);
     }
 
     private float[] loadPointerPosition(String keyX, String keyY) {
         SharedPreferences sharedPreferences = getSharedPreferences("PointerPrefs", MODE_PRIVATE);
-        float x = sharedPreferences.getFloat(keyX, 0); // Default ke 0 jika belum ada
+        float x = sharedPreferences.getFloat(keyX, 0);
         float y = sharedPreferences.getFloat(keyY, 0);
+
+        // Debugging log
+        Log.d("PointerPrefs", "Loaded " + keyX + ": " + x + ", " + keyY + ": " + y);
+
         return new float[]{x, y};
     }
+
 
     private void setupPointerMovement() {
 
@@ -749,7 +783,7 @@ public class StartWorking extends AppCompatActivity {
                         lastX_right = v.getX();
                         lastY_right = v.getY();
                         savePointerPosition("pointerRightX", "pointerRightY", lastX_right, lastY_right);
-
+                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_right + ", Y=" + lastY_right);
                         textPointerR.setText("X: " + lastX_right + " Y: " + lastY_right);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
                         new Handler().postDelayed(new Runnable() {
@@ -804,7 +838,7 @@ public class StartWorking extends AppCompatActivity {
                         lastX_left = v.getX();
                         lastY_left = v.getY();
                         savePointerPosition("pointerLeftX", "pointerLeftY", lastX_left, lastY_left);
-
+                        Log.d("PointerMovement", "Saved pointerLeft: X=" + lastX_left + ", Y=" + lastY_left);
                         textPointerL.setText("X: " + lastX_left + " Y: " + lastY_left);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
                         new Handler().postDelayed(new Runnable() {
