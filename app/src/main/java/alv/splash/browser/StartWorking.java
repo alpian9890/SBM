@@ -3,11 +3,13 @@ package alv.splash.browser;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,6 +17,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.view.MotionEvent;
 import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
@@ -71,6 +74,9 @@ public class StartWorking extends AppCompatActivity {
 
     BottomSheetDialog bottomSheetDialog;
 
+    float lastX_right, lastY_right, lastX_left, lastY_left;
+    ImageView pointerRight, pointerLeft;
+    TextView textPointerR, textPointerL;
 
     // Buat instance UrlValidator
     private UrlValidator urlValidator = new UrlValidator();
@@ -247,6 +253,22 @@ public class StartWorking extends AppCompatActivity {
         viewGecko.setSession(sessionGecko);
 
 
+        pointerRight = findViewById(R.id.pointerRight);
+        pointerLeft = findViewById(R.id.pointerLeft);
+        textPointerR = findViewById(R.id.textPointerR);
+        textPointerL = findViewById(R.id.textPointerL);
+
+        // Muat posisi pointerRight
+        float[] pointerRightPos = loadPointerPosition("pointerRightX", "pointerRightY");
+        pointerRight.setX(pointerRightPos[0]);
+        pointerRight.setY(pointerRightPos[1]);
+
+        // Muat posisi pointerLeft
+        float[] pointerLeftPos = loadPointerPosition("pointerLeftX", "pointerLeftY");
+        pointerLeft.setX(pointerLeftPos[0]);
+        pointerLeft.setY(pointerLeftPos[1]);
+        setupPointerMovement();
+
         setupWebViewSettings();
         setupWebViewClient();
         setupWebChromeClient();
@@ -264,7 +286,7 @@ public class StartWorking extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         // Cek apakah WebView terlihat (visible) dan mendapatkan fokus
-        if (webViewTab1.isShown() && webViewTab1.hasFocus()) {
+        if (webViewTab1.hasFocus()) {
             if (webViewTab1.canGoBack()) {
                 webViewTab1.goBack(); // Kembali ke URL sebelumnya jika ada riwayat navigasi
             } else {
@@ -277,11 +299,9 @@ public class StartWorking extends AppCompatActivity {
 
                 showExitConfirmationDialog();
             }
-        } else {
-            showExitConfirmationDialog();
         }
 
-        if (viewGecko.isShown() && viewGecko.hasFocus()) {
+        if (viewGecko.hasFocus()) {
             if (canGoBack == true) {
                 sessionGecko.goBack();
             } else {
@@ -289,10 +309,33 @@ public class StartWorking extends AppCompatActivity {
                 webViewTab1.clearFocus();
                 showExitConfirmationDialog();
             }
-        } else {
-            showExitConfirmationDialog();
         }
-        super.onBackPressed();
+
+        /*
+        if (!webViewTab1.hasFocus()) {
+            if (!viewGecko.hasFocus()){
+                showExitConfirmationDialog();
+            } else {
+                if (canGoBack == true) {
+                    sessionGecko.goBack();
+                } else {
+                    showExitConfirmationDialog();
+                }
+            }
+        } else if (!viewGecko.hasFocus()) {
+            if (!webViewTab1.hasFocus()) {
+                showExitConfirmationDialog();
+            } else {
+                if (webViewTab1.canGoBack()) {
+                    webViewTab1.goBack();
+                } else {
+                    showExitConfirmationDialog();
+                }
+            }
+        } else */ if (webViewTab1.getVisibility()==View.GONE && viewGecko.getVisibility()==View.GONE) {
+            super.onBackPressed();
+        }
+        //super.onBackPressed();
     }
 
     private void showExitConfirmationDialog() {
@@ -646,10 +689,140 @@ public class StartWorking extends AppCompatActivity {
                     titleTab1.setSelected(false);
                 }
             }
-
-
         });
     }
+
+    private void savePointerPosition(String keyX, String keyY, float x, float y) {
+        SharedPreferences sharedPreferences = getSharedPreferences("PointerPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putFloat(keyX, x);
+        editor.putFloat(keyY, y);
+        editor.apply();
+    }
+
+    private float[] loadPointerPosition(String keyX, String keyY) {
+        SharedPreferences sharedPreferences = getSharedPreferences("PointerPrefs", MODE_PRIVATE);
+        float x = sharedPreferences.getFloat(keyX, 0); // Default ke 0 jika belum ada
+        float y = sharedPreferences.getFloat(keyY, 0);
+        return new float[]{x, y};
+    }
+
+    private void setupPointerMovement() {
+
+        pointerRight.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Ambil jarak antara titik sentuh dan posisi ImageView
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        textPointerR.setVisibility(View.VISIBLE);
+                        textPointerR.setText("X: " + dX + " Y: " + dY);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Hitung posisi baru berdasarkan titik sentuh
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+
+                        // Dapatkan batas root layout
+                        int rootWidth = viewGecko.getWidth();
+                        int rootHeight = viewGecko.getHeight();
+
+                        // Pastikan pointer tetap dalam batas
+                        if (newX < 0) newX = 0;
+                        if (newX + v.getWidth() > rootWidth) newX = rootWidth - v.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY + v.getHeight() > rootHeight) newY = rootHeight - v.getHeight();
+
+                        // Pindahkan pointer
+                        v.setX(newX);
+                        v.setY(newY);
+                        textPointerR.setText("X: " + newX + " Y: " + newY);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        // Simpan koordinat saat pointer dilepaskan
+                        lastX_right = v.getX();
+                        lastY_right = v.getY();
+                        savePointerPosition("pointerRightX", "pointerRightY", lastX_right, lastY_right);
+
+                        textPointerR.setText("X: " + lastX_right + " Y: " + lastY_right);
+                        // Simpan atau gunakan koordinat untuk kebutuhan Anda
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                textPointerR.setVisibility(View.GONE);
+                            }
+                        }, 1000);
+                        break;
+                }
+                return true;
+            }
+        });
+
+        pointerLeft.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Ambil jarak antara titik sentuh dan posisi ImageView
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        textPointerL.setVisibility(View.VISIBLE);
+                        textPointerL.setText("X: " + dX + " Y: " + dY);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Hitung posisi baru berdasarkan titik sentuh
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+
+                        // Dapatkan batas root layout
+                        int rootWidth = webViewTab1.getWidth();
+                        int rootHeight = webViewTab1.getHeight();
+
+                        // Pastikan pointer tetap dalam batas
+                        if (newX < 0) newX = 0;
+                        if (newX + v.getWidth() > rootWidth) newX = rootWidth - v.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY + v.getHeight() > rootHeight) newY = rootHeight - v.getHeight();
+
+                        // Pindahkan pointer
+                        v.setX(newX);
+                        v.setY(newY);
+                        textPointerL.setText("X: " + newX + " Y: " + newY);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        // Simpan koordinat saat pointer dilepaskan
+                        lastX_left = v.getX();
+                        lastY_left = v.getY();
+                        savePointerPosition("pointerLeftX", "pointerLeftY", lastX_left, lastY_left);
+
+                        textPointerL.setText("X: " + lastX_left + " Y: " + lastY_left);
+                        // Simpan atau gunakan koordinat untuk kebutuhan Anda
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                textPointerL.setVisibility(View.GONE);
+                            }
+                        }, 1000);
+
+                        break;
+                }
+                return true;
+            }
+        });
+
+    }
+
+
 
 
 

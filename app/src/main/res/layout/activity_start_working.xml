@@ -29,6 +29,31 @@
                 style="?android:progressBarStyleHorizontal"
                 android:visibility="gone"/>
 
+            <ImageView
+                android:id="@+id/pointerLeft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:src="@drawable/pointer_24dp"/>
+
+            <TextView
+                android:id="@+id/textPointerL"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFD700"
+                android:textAlignment="center"
+                android:layout_centerInParent="true"
+                android:layout_alignParentTop="true"
+                android:shadowColor="#000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4"
+                android:singleLine="true"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
+
         </RelativeLayout>
 
         <RelativeLayout
@@ -50,6 +75,31 @@
                 android:progressDrawable="@drawable/progress_loadurl"
                 style="?android:progressBarStyleHorizontal"
                 android:visibility="gone"/>
+
+            <ImageView
+                android:id="@+id/pointerRight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:src="@drawable/pointer_24dp"/>
+
+            <TextView
+                android:id="@+id/textPointerR"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_alignParentTop="true"
+                android:textColor="#FFD700"
+                android:textAlignment="center"
+                android:shadowColor="#000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4"
+                android:singleLine="true"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
 
         </RelativeLayout>
 
