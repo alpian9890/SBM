@@ -11,7 +11,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -30,12 +32,15 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -48,6 +53,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+
+import org.jetbrains.annotations.NotNull;
 import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.GeckoView;
@@ -62,13 +69,15 @@ public class StartWorking extends AppCompatActivity {
     String getUrl2 ="";
     String pageTitle1 ="";
     String pageTitle2 = "";
+    String title_earning = "Money Earning";
     private static final int FILE_CHOOSER_REQUEST_CODE = 100;
     FloatingActionButton fabControl;
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
     TextView titleTab1, titleTab2;
     ProgressBar pBarTab1, pBarTab2;
-    TextInputLayout etLayout1, etLayout2;
-    TextInputEditText etSearch1, etSearch2;
+    TextInputLayout etLayout1, etLayout2, etLayoutTitleKB;
+    TextInputEditText etSearch1, etSearch2, editTextTitleKB;
+    Button btnSaveTitle;
     WebView webViewTab1;
     private static GeckoRuntime sRuntime;
     GeckoView viewGecko;
@@ -82,6 +91,28 @@ public class StartWorking extends AppCompatActivity {
     TextView textPointerR, textPointerL;
 
     private boolean toggleClick = true;
+    String injectInputKB =
+            "var observer = new MutationObserver(function(mutations) {" +
+                    "    mutations.forEach(function(mutation) {" +
+                    "        if (mutation.addedNodes) {" +
+                    "            mutation.addedNodes.forEach(function(node) {" +
+                    "                if (node.nodeType === 1) {" +
+                    "if (node.tagName ==='INPUT') { " +
+                    "                    node.focus();" +
+                    " }"+
+                    "const inputs = node.getElementsByTagName('input');"+
+                    "if (inputs.length === 0 || inputs.length > 0) {"+
+                    "inputs[0].focus();"+
+                    "}"+
+                    "                }" +
+                    "            });" +
+                    "        }" +
+                    "    });" +
+                    "});" +
+                    "observer.observe(document.body, { childList: true, subtree: true });";
+
+    String autoFokusInput =
+            "(function() { document.getElementsByTagName('input')[0].focus(); })();";
 
     // Buat instance UrlValidator
     private UrlValidator urlValidator = new UrlValidator();
@@ -121,6 +152,21 @@ public class StartWorking extends AppCompatActivity {
         etLayout2 = bottomSheetDialog.findViewById(R.id.etLayout2);
         etSearch1 = bottomSheetDialog.findViewById(R.id.et_search1);
         etSearch2 = bottomSheetDialog.findViewById(R.id.et_search2);
+
+        etLayoutTitleKB = bottomSheetDialog.findViewById(R.id.etLayoutTitleKB);
+        editTextTitleKB = bottomSheetDialog.findViewById(R.id.editTextTitleKB);
+        btnSaveTitle = bottomSheetDialog.findViewById(R.id.btnSaveTitle);
+
+        editTextTitleKB.setText(title_earning);
+
+        loadTitleKB(title_earning);
+
+        btnSaveTitle.setOnClickListener(v -> {
+            title_earning = editTextTitleKB.getText().toString().trim();
+            bottomSheetDialog.dismiss();
+            Toast.makeText(this, "Saving...", Toast.LENGTH_SHORT).show();
+            saveEditTextTitleKB(title_earning);
+        });
 
 
         //BottomSheetDialog
@@ -289,38 +335,44 @@ public class StartWorking extends AppCompatActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
-            // Tangani tombol ENTER dengan ACTION_UP
-            performAutoClick();
-            return true;
-        }
-        if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
-            // Tangani tombol ENTER dengan ACTION_UP
-            performAutoClick();
-            return true;
+        if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
+
+            if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
+
+                if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+                    // Tangani tombol ENTER dengan ACTION_UP
+                    super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                    new Handler().postDelayed(() -> performAutoClick(), 200);
+                    return true;
+                }
+                if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
+                    // Tangani tombol ENTER dengan ACTION_UP
+                    super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE));
+                    new Handler().postDelayed(() -> performAutoClick(), 300);
+                    return true;
+                }
+
+            }
+
         }
         return super.dispatchKeyEvent(event);
     }
 
     private void performAutoClick() {
-        View rootView;
-        float x, y;
 
         if (toggleClick) {
             // AutoClick untuk pointerRight
-            rootView = viewGecko; // Root view batas pointerRight
-            x = lastX_right;
-            y = lastY_right;
+            //webViewTab1.clearFocus();
+            viewGecko.requestFocus(); // Root view batas pointerRight
+            simulateTouch(viewGecko, lastX_right, lastY_right);
+            toggleClick = false;
         } else {
             // AutoClick untuk pointerLeft
-            rootView = webViewTab1; // Root view batas pointerLeft
-            x = lastX_left;
-            y = lastY_left;
+            //viewGecko.clearFocus();
+            webViewTab1.requestFocus(); // Root view batas pointerLeft
+            simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
+            toggleClick = true;
         }
-
-        toggleClick = !toggleClick; // Toggle untuk pergantian
-
-        simulateTouch(rootView, x, y);
     }
 
     private void simulateTouch(View rootView, float x, float y) {
@@ -354,16 +406,78 @@ public class StartWorking extends AppCompatActivity {
 
         // Kirim event ke rootView
         rootView.dispatchTouchEvent(downEvent);
-        new Handler().postDelayed(() -> {
-            rootView.dispatchTouchEvent(upEvent);
-        }, 100); // Delay 100ms
+        new Handler().postDelayed(() -> rootView.dispatchTouchEvent(upEvent), 150);
+
         // Release event
         downEvent.recycle();
-        new Handler().postDelayed(() -> {
-            upEvent.recycle();
-        }, 70); // Delay 70ms
+        new Handler().postDelayed(() -> upEvent.recycle(), 100);
     }
 
+    private void simulateDoubleClick(View rootView, float x, float y) {
+        // Konversi koordinat ke layar global (jika diperlukan)
+
+        float screenX = x;
+        float screenY = y;
+
+        // Durasi antar klik untuk double click
+        final int doubleClickInterval = 120; // 100ms antara klik pertama dan kedua
+
+        // Simulasi klik pertama
+        long downTime = SystemClock.uptimeMillis();
+        MotionEvent downEvent1 = MotionEvent.obtain(
+                downTime,
+                downTime,
+                MotionEvent.ACTION_DOWN,
+                screenX,
+                screenY,
+                0
+        );
+
+        MotionEvent upEvent1 = MotionEvent.obtain(
+                downTime,
+                downTime + 50, // 50ms setelah ACTION_DOWN
+                MotionEvent.ACTION_UP,
+                screenX,
+                screenY,
+                0
+        );
+
+        // Simulasi klik kedua
+        long secondClickTime = downTime + doubleClickInterval;
+        MotionEvent downEvent2 = MotionEvent.obtain(
+                secondClickTime,
+                secondClickTime,
+                MotionEvent.ACTION_DOWN,
+                screenX,
+                screenY,
+                0
+        );
+
+        MotionEvent upEvent2 = MotionEvent.obtain(
+                secondClickTime,
+                secondClickTime + 50, // 50ms setelah ACTION_DOWN kedua
+                MotionEvent.ACTION_UP,
+                screenX,
+                screenY,
+                0
+        );
+
+        // Kirim event untuk klik pertama
+        rootView.dispatchTouchEvent(downEvent1);
+        rootView.dispatchTouchEvent(upEvent1);
+
+        // Delay sebelum klik kedua
+        new Handler().postDelayed(() -> {
+            rootView.dispatchTouchEvent(downEvent2);
+            rootView.dispatchTouchEvent(upEvent2);
+
+            // Release semua event
+            downEvent1.recycle();
+            upEvent1.recycle();
+            downEvent2.recycle();
+            upEvent2.recycle();
+        }, doubleClickInterval);
+    }
 
 
     private void showKeyboard(View view) {
@@ -449,6 +563,18 @@ public class StartWorking extends AppCompatActivity {
 
         sessionGecko.setProgressDelegate(new GeckoSession.ProgressDelegate() {
 
+            @Override
+            public void onPageStart(@NonNull @NotNull GeckoSession session, @NonNull @NotNull String url) {
+                pBarTab2.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onPageStop(@NonNull @NotNull GeckoSession session, boolean success) {
+                pBarTab2.setVisibility(View.GONE);
+                if (pageTitle2.contains("kolotibablo.com")) {
+                    session.loadUri("javascript:"+injectInputKB);
+                }
+            }
             @Override
             public void onProgressChange(GeckoSession session, int progress) {
                 //textViewProgress.setText(progress + "%"); // Tampilkan progress di TextView
@@ -587,6 +713,9 @@ public class StartWorking extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
+                if (url.contains("kolotibablo.com")) {
+                    view.evaluateJavascript(injectInputKB, null);
+                }
 
             }
 
@@ -716,6 +845,46 @@ public class StartWorking extends AppCompatActivity {
                 }
             }
         });
+    }
+    private TextWatcher titleTextWatcher = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            String newTitle = s.toString().trim();
+            title_earning = newTitle;
+            saveEditTextTitleKB(title_earning);
+        }
+    };
+    private void saveEditTextTitleKB (String titleKB) {
+
+        try {
+            SharedPreferences sharedPreferences = getSharedPreferences("titleKB", MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString("titleKB", titleKB);
+            editor.apply();
+            title_earning = titleKB;
+            // Debugging log
+            Log.d("titleKB", "Saved " + " : " + titleKB);
+            Toast.makeText(this, "Title saved successfully", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e("titleKB", "Error saving title: " + e.getMessage());
+            Toast.makeText(this, "Error saving title:  "+e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void loadTitleKB(String titleKB) {
+        SharedPreferences sharedPreferences = getSharedPreferences("titleKB", MODE_PRIVATE);
+        title_earning = sharedPreferences.getString("titleKB", titleKB);
+        editTextTitleKB.setText(title_earning);
+        // Debugging log
+        Log.d("titleKB", "Loaded " + " : " + titleKB);
+
     }
 
     private void savePointerPosition(String keyX, String keyY, float x, float y) {

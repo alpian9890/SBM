@@ -132,8 +132,42 @@
 
 
         </LinearLayout>
+    </LinearLayout>
 
+    <LinearLayout
+        android:layout_marginTop="12dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="horizontal">
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/etLayoutTitleKB"
+            android:layout_marginEnd="4dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Page Titlle"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
+            app:endIconMode="clear_text">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextTitleKB"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:imeOptions="actionDone"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:id="@+id/btnSaveTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Save"/>
 
     </LinearLayout>
+
 </LinearLayout>
