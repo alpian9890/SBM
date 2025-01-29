@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
@@ -75,8 +76,10 @@ public class StartWorking extends AppCompatActivity {
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
     TextView titleTab1, titleTab2;
     ProgressBar pBarTab1, pBarTab2;
+    LinearLayout layoutAddressBar1, layoutAddressBar2;
     TextInputLayout etLayout1, etLayout2, etLayoutTitleKB;
     TextInputEditText etSearch1, etSearch2, editTextTitleKB;
+    Drawable bg_lavender_rounded;
     Button btnSaveTitle;
     WebView webViewTab1;
     private static GeckoRuntime sRuntime;
@@ -137,6 +140,8 @@ public class StartWorking extends AppCompatActivity {
         pBarTab1 = findViewById(R.id.pBarTab1);
         pBarTab2 = findViewById(R.id.pBarTab2);
 
+        bg_lavender_rounded = getResources().getDrawable(R.drawable.edittext);
+
         bottomSheetDialog = new BottomSheetDialog(this);
         bottomSheetDialog.setContentView(R.layout.sw_bottomsheet_control);
         bottomSheetDialog.setCancelable(true);
@@ -152,6 +157,9 @@ public class StartWorking extends AppCompatActivity {
         etLayout2 = bottomSheetDialog.findViewById(R.id.etLayout2);
         etSearch1 = bottomSheetDialog.findViewById(R.id.et_search1);
         etSearch2 = bottomSheetDialog.findViewById(R.id.et_search2);
+
+        layoutAddressBar1 = bottomSheetDialog.findViewById(R.id.layoutAddressBar1);
+        layoutAddressBar2 = bottomSheetDialog.findViewById(R.id.layoutAddressBar2);
 
         etLayoutTitleKB = bottomSheetDialog.findViewById(R.id.etLayoutTitleKB);
         editTextTitleKB = bottomSheetDialog.findViewById(R.id.editTextTitleKB);
@@ -189,6 +197,8 @@ public class StartWorking extends AppCompatActivity {
                 // Ubah visibilitas saat dialog ditutup
                 etLayout1.setVisibility(View.GONE);
                 etLayout2.setVisibility(View.GONE);
+                layoutAddressBar1.setBackground(bg_lavender_rounded);
+                layoutAddressBar2.setBackground(bg_lavender_rounded);
 
                 pageSecure1.setVisibility(View.VISIBLE);
                 titleTab1.setVisibility(View.VISIBLE);
@@ -216,6 +226,7 @@ public class StartWorking extends AppCompatActivity {
                 // Sembunyikan keyboard
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(etSearch1.getWindowToken(), 0);
+                bottomSheetDialog.dismiss();
                 return true;
             }
             return false;
@@ -232,6 +243,7 @@ public class StartWorking extends AppCompatActivity {
                 // Sembunyikan keyboard
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(etSearch2.getWindowToken(), 0);
+                bottomSheetDialog.dismiss();
                 return true;
             }
             return false;
@@ -240,6 +252,7 @@ public class StartWorking extends AppCompatActivity {
         etSearch1.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
                 etLayout1.setVisibility(View.GONE);
+                layoutAddressBar1.setBackground(bg_lavender_rounded);
 
                 pageSecure1.setVisibility(View.VISIBLE);
                 titleTab1.setVisibility(View.VISIBLE);
@@ -251,6 +264,7 @@ public class StartWorking extends AppCompatActivity {
         etSearch2.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
                 etLayout2.setVisibility(View.GONE);
+                layoutAddressBar2.setBackground(bg_lavender_rounded);
 
                 pageSecure2.setVisibility(View.VISIBLE);
                 titleTab2.setVisibility(View.VISIBLE);
@@ -662,6 +676,7 @@ public class StartWorking extends AppCompatActivity {
         refreshTab1.setVisibility(View.GONE);
 
         etLayout1.setVisibility(View.VISIBLE);
+        layoutAddressBar1.setBackground(null);
 
         etSearch1.selectAll();
         etSearch1.requestFocus();
@@ -674,6 +689,7 @@ public class StartWorking extends AppCompatActivity {
         refreshTab2.setVisibility(View.GONE);
 
         etLayout2.setVisibility(View.VISIBLE);
+        layoutAddressBar2.setBackground(null);
 
         etSearch2.selectAll();
         etSearch2.requestFocus();

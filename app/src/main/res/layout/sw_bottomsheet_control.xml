@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"/>
 
     <LinearLayout
+        android:gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
@@ -21,10 +22,11 @@
             android:layout_weight="1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal"
             android:background="@drawable/edittext"
             android:padding="7dp"
-            android:gravity="center_vertical">
+            android:gravity="center">
 
             <!-- PageSecure Icon -->
             <ImageView
@@ -59,9 +61,8 @@
                 android:visibility="gone"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:background="@drawable/edittext"
                 android:layout_weight="1"
-                android:hint="Search"
-                style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
                 app:endIconMode="clear_text">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -69,6 +70,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
+                    android:hint="@string/search_or_type_url"
                     android:imeOptions="actionSearch" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -79,10 +81,11 @@
             android:layout_weight="1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:orientation="horizontal"
             android:background="@drawable/edittext"
             android:padding="7dp"
-            android:gravity="center_vertical">
+            android:gravity="center">
 
             <!-- PageSecure Icon -->
             <ImageView
@@ -117,9 +120,8 @@
                 android:visibility="gone"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:background="@drawable/edittext"
                 android:layout_weight="1"
-                android:hint="Search"
-                style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
                 app:endIconMode="clear_text">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -127,6 +129,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="text"
+                    android:hint="@string/search_or_type_url"
                     android:imeOptions="actionSearch" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -148,7 +151,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Page Titlle"
+            android:hint="Page Title"
             style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.Dense"
             app:endIconMode="clear_text">
 
@@ -166,6 +169,8 @@
             android:id="@+id/btnSaveTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:backgroundTint="#F42B7B"
+            android:textColor="@color/black"
             android:text="Save"/>
 
     </LinearLayout>
