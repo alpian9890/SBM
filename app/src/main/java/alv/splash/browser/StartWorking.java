@@ -22,6 +22,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.MotionEvent;
 import android.webkit.JavascriptInterface;
@@ -34,11 +35,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -48,6 +47,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -79,6 +82,7 @@ public class StartWorking extends AppCompatActivity {
     LinearLayout layoutAddressBar1, layoutAddressBar2;
     TextInputLayout etLayout1, etLayout2, etLayoutTitleKB;
     TextInputEditText etSearch1, etSearch2, editTextTitleKB;
+	ToggleButton btnPointerVisibility;
     Drawable bg_lavender_rounded;
     Button btnSaveTitle;
     WebView webViewTab1;
@@ -216,24 +220,30 @@ public class StartWorking extends AppCompatActivity {
 
         // Event saat tombol enter ditekan
         etSearch1.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
-                String userInput = etSearch1.getText().toString();
-                String processedUrl = urlValidator.processInput(userInput);
+			if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+			(event != null && 
+			event.getKeyCode() == KeyEvent.KEYCODE_ENTER && 
+			event.getAction() == KeyEvent.ACTION_DOWN)) {
+        
+        String userInput = etSearch1.getText().toString();
+        String processedUrl = urlValidator.processInput(userInput);
 
-                // Memuat URL yang sudah diproses ke WebView
-                webViewTab1.loadUrl(processedUrl);
+        // Memuat URL yang sudah diproses ke WebView
+        webViewTab1.loadUrl(processedUrl);
 
-                // Sembunyikan keyboard
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(etSearch1.getWindowToken(), 0);
-                bottomSheetDialog.dismiss();
-                return true;
-            }
-            return false;
-        });
+        // Sembunyikan keyboard
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(etSearch1.getWindowToken(), 0);
+        bottomSheetDialog.dismiss();
+        return true;
+    }
+    return false;
+});
         // Event saat tombol enter ditekan
         etSearch2.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || (event != null &&
+			event.getKeyCode() == KeyEvent.KEYCODE_ENTER && 
+			event.getAction() == KeyEvent.ACTION_DOWN)) {
                 String userInput = etSearch2.getText().toString();
                 String processedUrl = urlValidator.processInput(userInput);
 
@@ -244,6 +254,11 @@ public class StartWorking extends AppCompatActivity {
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(etSearch2.getWindowToken(), 0);
                 bottomSheetDialog.dismiss();
+				Log.d("SearchDebug", "ActionId: " + actionId);
+				if (event != null) {
+					Log.d("SearchDebug", "KeyCode: " + event.getKeyCode());
+					Log.d("SearchDebug", "Action: " + event.getAction());
+					}
                 return true;
             }
             return false;
@@ -322,6 +337,22 @@ public class StartWorking extends AppCompatActivity {
         pointerLeft = findViewById(R.id.pointerLeft);
         textPointerR = findViewById(R.id.textPointerR);
         textPointerL = findViewById(R.id.textPointerL);
+		
+		btnPointerVisibility = bottomSheetDialog.findViewById(R.id.btnPointerVisibilty);
+        btnPointerVisibility.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                // Jika isChecked adalah true, maka set kedua ImageView menjadi VISIBLE
+                if (isChecked) {
+                    pointerRight.setVisibility(View.VISIBLE);
+                    pointerLeft.setVisibility(View.VISIBLE);
+                } else {
+                    // Jika isChecked adalah false, maka set kedua ImageView menjadi INVISIBLE
+                    pointerRight.setVisibility(View.INVISIBLE);
+                    pointerLeft.setVisibility(View.INVISIBLE);
+                }
+            }
+        });
 
         setupWebViewSettings();
         setupWebViewClient();

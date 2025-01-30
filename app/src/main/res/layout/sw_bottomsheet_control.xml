@@ -7,10 +7,6 @@
     android:id="@+id/rootBottomsheetSW"
     android:padding="16dp">
 
-    <com.google.android.material.bottomsheet.BottomSheetDragHandleView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
     <LinearLayout
         android:gravity="center"
         android:layout_width="match_parent"
@@ -61,17 +57,21 @@
                 android:visibility="gone"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:background="@drawable/edittext"
                 android:layout_weight="1"
+                app:hintEnabled="false"
                 app:endIconMode="clear_text">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_search1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
+                    android:background="@drawable/edittext"
+                    android:inputType="textUri"
                     android:hint="@string/search_or_type_url"
-                    android:imeOptions="actionSearch" />
+                    android:imeOptions="actionSearch"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:lines="1"/>
             </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
@@ -120,17 +120,21 @@
                 android:visibility="gone"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:background="@drawable/edittext"
                 android:layout_weight="1"
+                app:hintEnabled="false"
                 app:endIconMode="clear_text">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_search2"
+                    android:background="@drawable/edittext"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
+                    android:inputType="textUri"
                     android:hint="@string/search_or_type_url"
-                    android:imeOptions="actionSearch" />
+                    android:imeOptions="actionSearch" 
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:lines="1"/>
             </com.google.android.material.textfield.TextInputLayout>
 
 
@@ -139,6 +143,7 @@
 
     <LinearLayout
         android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -175,4 +180,164 @@
 
     </LinearLayout>
 
+<LinearLayout
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="6dp">
+
+    <LinearLayout
+        android:layout_width="160dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ToggleButton
+            android:id="@+id/btnPointerVisibilty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textOn=" Visible "
+            android:textOff="Invisible"
+			android:checked="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pointer Visibility"
+            android:fontFamily="monospace"
+            android:textSize="9sp"
+            android:textColor="#F42B7B"
+            android:layout_marginBottom="5dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_weight="1"
+        android:layout_width="0dp"
+        android:background="@drawable/edittext"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:background="@color/black"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- On/Off Calculator Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="On/Off Calculator :"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• CTRL-L + CTRL-R"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Start/Pause Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Start/Pause :"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• ALT-L + NUMP-7 (tab-1)"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• ALT-L + NUMP-9 (tab-2)"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Exit/Close Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Exit/Close :"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• ALT-R + NUMP-7 (tab-1)"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• ALT-R + NUMP-9 (tab-2)"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_marginStart="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:gravity="center"
+            android:layout_marginHorizontal="13dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:text="Speed"/>
+            <TextView
+                android:id="@+id/speedTestWPM"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="WPM"
+                android:fontFamily="monospace"/>
+
+        </LinearLayout>
+
+        <ToggleButton
+            android:id="@+id/btnPlayPauseWPM"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/toggle_play_pause"
+            android:textOff=""
+            android:textOn="" />
+
+    </LinearLayout>
+
+</LinearLayout>
 </LinearLayout>
