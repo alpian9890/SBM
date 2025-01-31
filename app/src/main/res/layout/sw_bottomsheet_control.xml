@@ -209,15 +209,19 @@
             android:textColor="#F42B7B"
             android:layout_marginBottom="5dp"/>
     </LinearLayout>
-
-    <ScrollView
+	
+	<FrameLayout
         android:layout_weight="1"
         android:layout_width="0dp"
-        android:background="@drawable/edittext"
+        android:background="@drawable/black_lavender"
+        android:layout_height="match_parent">
+		
+		<ScrollView
+        android:layout_width="match_parent"
         android:layout_height="match_parent">
 
         <LinearLayout
-            android:background="@color/black"
+            android:gravity="center"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -237,7 +241,16 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• CTRL-L + CTRL-R"
+                android:text="• CTRL + ESC"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• CTRL + NUMPED_DOT"
                 android:textColor="#FFFF00"
                 android:fontFamily="monospace"
                 android:layout_marginStart="16dp"
@@ -257,7 +270,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• ALT-L + NUMP-7 (tab-1)"
+                android:text="• ALT + NUMP-7 (tab-1)"
                 android:textColor="#FFFF00"
                 android:fontFamily="monospace"
                 android:layout_marginStart="16dp"/>
@@ -265,8 +278,9 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• ALT-L + NUMP-9 (tab-2)"
-                android:textColor="#FFFFFF"
+                android:text="• ALT + NUMP-9 (tab-2)"
+                android:textColor="#FFFF00"
+                android:fontFamily="monospace"
                 android:layout_marginStart="16dp"
                 android:layout_marginBottom="16dp"/>
 
@@ -284,7 +298,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• ALT-R + NUMP-7 (tab-1)"
+                android:text="• CTRL + ALT + NUMP-7 (tab-1)"
                 android:textColor="#FFFF00"
                 android:fontFamily="monospace"
                 android:layout_marginStart="16dp"/>
@@ -292,7 +306,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• ALT-R + NUMP-9 (tab-2)"
+                android:text="• CTRL + ALT + NUMP-9 (tab-2)"
                 android:textColor="#FFFF00"
                 android:fontFamily="monospace"
                 android:layout_marginStart="16dp"/>
@@ -300,6 +314,8 @@
         </LinearLayout>
 
     </ScrollView>
+		
+	</FrameLayout>
 
     <LinearLayout
         android:layout_marginStart="10dp"
@@ -331,8 +347,8 @@
 
         <ToggleButton
             android:id="@+id/btnPlayPauseWPM"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
             android:background="@drawable/toggle_play_pause"
             android:textOff=""
             android:textOn="" />

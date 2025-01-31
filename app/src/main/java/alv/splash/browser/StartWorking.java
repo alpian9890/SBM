@@ -1,5 +1,7 @@
 package alv.splash.browser;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -77,7 +79,7 @@ public class StartWorking extends AppCompatActivity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 100;
     FloatingActionButton fabControl;
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
-    TextView titleTab1, titleTab2;
+    TextView titleTab1, titleTab2, textCalculatorMode;
     ProgressBar pBarTab1, pBarTab2;
     LinearLayout layoutAddressBar1, layoutAddressBar2;
     TextInputLayout etLayout1, etLayout2, etLayoutTitleKB;
@@ -93,8 +95,12 @@ public class StartWorking extends AppCompatActivity {
 
     BottomSheetDialog bottomSheetDialog;
 
-    float lastX_right, lastY_right, lastX_left, lastY_left;
-    ImageView pointerRight, pointerLeft;
+    float lastX_right, lastY_right, lastX_left, lastY_left,
+          lastX_pauseR, lastY_pauseR, lastX_pauseL, lastY_pauseL,
+          lastX_closeR, lastY_closeR, lastX_closeL, lastY_closeL;;
+    ImageView pointerRight, pointerLeft,
+            pointerPauseR, pointerPauseL,
+            pointerCloseR, pointerCloseL;
     TextView textPointerR, textPointerL;
 
     private boolean toggleClick = true;
@@ -123,6 +129,9 @@ public class StartWorking extends AppCompatActivity {
 
     // Buat instance UrlValidator
     private UrlValidator urlValidator = new UrlValidator();
+    private CalculatorPusing calculator;
+    private boolean isCalculationMode = false;
+    private StringBuilder calculationBuffer = new StringBuilder();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,8 +143,18 @@ public class StartWorking extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_start_working);
 
+        calculator = new CalculatorPusing(this);
+        textCalculatorMode = findViewById(R.id.textCalculatorMode);
+        // Set status awal
+        updateCalculatorModeStatus();
+
         webViewTab1 = findViewById(R.id.webViewTab1);
         new AdBlockerWebView.init(this).initializeWebView(webViewTab1);
+
+        pointerPauseR = findViewById(R.id.pointerPauseR);
+        pointerPauseL = findViewById(R.id.pointerPauseL);
+        pointerCloseR = findViewById(R.id.pointerCloseR);
+        pointerCloseL = findViewById(R.id.pointerCloseL);
 
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
@@ -342,14 +361,26 @@ public class StartWorking extends AppCompatActivity {
         btnPointerVisibility.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // Jika isChecked adalah true, maka set kedua ImageView menjadi VISIBLE
+                // Jika isChecked adalah true, maka set cursor menjadi VISIBLE
                 if (isChecked) {
                     pointerRight.setVisibility(View.VISIBLE);
                     pointerLeft.setVisibility(View.VISIBLE);
+
+                    pointerPauseR.setVisibility(View.VISIBLE);
+                    pointerPauseL.setVisibility(View.VISIBLE);
+
+                    pointerCloseR.setVisibility(View.VISIBLE);
+                    pointerCloseL.setVisibility(View.VISIBLE);
                 } else {
-                    // Jika isChecked adalah false, maka set kedua ImageView menjadi INVISIBLE
+                    // Jika isChecked adalah false, maka set cursor menjadi INVISIBLE
                     pointerRight.setVisibility(View.INVISIBLE);
                     pointerLeft.setVisibility(View.INVISIBLE);
+					
+					pointerPauseR.setVisibility(View.INVISIBLE);
+                    pointerPauseL.setVisibility(View.INVISIBLE);
+
+                    pointerCloseR.setVisibility(View.INVISIBLE);
+                    pointerCloseL.setVisibility(View.INVISIBLE);
                 }
             }
         });
@@ -369,9 +400,27 @@ public class StartWorking extends AppCompatActivity {
             pointerRight.setX(Math.max(0, Math.min(pointerRightPos[0], viewGecko.getWidth() - pointerRight.getWidth())));
             pointerRight.setY(Math.max(0, Math.min(pointerRightPos[1], viewGecko.getHeight() - pointerRight.getHeight())));
 
+            float[] pointerPauseRPos = loadPointerPosition("pointerPauseRX", "pointerPauseRY");
+            pointerRight.setX(Math.max(0, Math.min(pointerPauseRPos[0], viewGecko.getWidth() - pointerPauseR.getWidth())));
+            pointerRight.setY(Math.max(0, Math.min(pointerPauseRPos[1], viewGecko.getHeight() - pointerPauseR.getHeight())));
+
+            float[] pointerCloseRPos = loadPointerPosition("pointerCloseRX", "pointerCloseRY");
+            pointerCloseR.setX(Math.max(0, Math.min(pointerCloseRPos[0], viewGecko.getWidth() - pointerCloseR.getWidth())));
+            pointerCloseR.setY(Math.max(0, Math.min(pointerCloseRPos[1], viewGecko.getHeight() - pointerCloseR.getHeight())));
+
             float[] pointerLeftPos = loadPointerPosition("pointerLeftX", "pointerLeftY");
             pointerLeft.setX(Math.max(0, Math.min(pointerLeftPos[0], webViewTab1.getWidth() - pointerLeft.getWidth())));
             pointerLeft.setY(Math.max(0, Math.min(pointerLeftPos[1], webViewTab1.getHeight() - pointerLeft.getHeight())));
+
+            float[] pointerPauseLPos = loadPointerPosition("pointerPauseLX", "pointerPauseLY");
+            pointerPauseL.setX(Math.max(0, Math.min(pointerPauseLPos[0], webViewTab1.getWidth() - pointerPauseL.getWidth())));
+            pointerPauseL.setY(Math.max(0, Math.min(pointerPauseLPos[1], webViewTab1.getHeight() - pointerPauseL.getHeight())));
+
+            float[] pointerCloseLPos = loadPointerPosition("pointerCloseLX", "pointerCloseLX");
+            pointerCloseL.setX(Math.max(0, Math.min(pointerCloseLPos[0], webViewTab1.getWidth() - pointerCloseL.getWidth())));
+            pointerCloseL.setY(Math.max(0, Math.min(pointerCloseLPos[1], webViewTab1.getHeight() - pointerCloseL.getHeight())));
+
+
         });
 
 
@@ -390,6 +439,7 @@ public class StartWorking extends AppCompatActivity {
                     new Handler().postDelayed(() -> performAutoClick(), 200);
                     return true;
                 }
+
                 if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
                     // Tangani tombol ENTER dengan ACTION_UP
                     super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE));
@@ -397,10 +447,141 @@ public class StartWorking extends AppCompatActivity {
                     return true;
                 }
 
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                   event.isAltPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7) {
+                    simulateTouch(webViewTab1, lastX_pauseL, lastY_pauseL);
+                    return true;
+                }
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isAltPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_9) {
+                    simulateTouch(viewGecko, lastX_pauseR, lastY_pauseR);
+                    return true;
+                }
+
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() &&
+                        event.isAltPressed() &&
+                        event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7) {
+                    simulateTouch(webViewTab1, lastX_closeL, lastY_closeL);
+                }
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() &&
+                        event.isAltPressed() &&
+                        event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_9) {
+                    simulateTouch(viewGecko, lastX_closeR, lastY_closeR);
+                }
+
+            }
+
+            if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                    event.isCtrlPressed() &&
+                    event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_DOT ||
+                    event.getAction() == KeyEvent.ACTION_DOWN &&
+                            event.isCtrlPressed() &&
+                            event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE ) {
+                handleCalculationModeToggle();
+                return true;
+            }
+
+            if (isCalculationMode) {
+                handleCalculationInput(event);
+                return true;
             }
 
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    private void updateCalculatorModeStatus() {
+        // Update text dan warna background berdasarkan status mode
+        if (isCalculationMode) {
+            textCalculatorMode.setText("Calculator: ON");
+            textCalculatorMode.setBackgroundColor(getResources().getColor(R.color.green));
+        } else {
+            textCalculatorMode.setText("Calculator: OFF");
+            textCalculatorMode.setTextColor(getResources().getColor(R.color.red));
+        }
+    }
+
+    private boolean isValidCalculationKey(int keyCode) {
+        // Validasi keycode yang diizinkan: angka, operator, dan titik desimal
+        return (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_0 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_1 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_2 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_3 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_4 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_5 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_6 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_7 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_8 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_9 ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_DOT ||
+                keyCode == KeyEvent.KEYCODE_PLUS ||
+                keyCode == KeyEvent.KEYCODE_MINUS ||
+                keyCode == KeyEvent.KEYCODE_STAR ||
+                keyCode == KeyEvent.KEYCODE_SLASH ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_ADD ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_SUBTRACT ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_MULTIPLY ||
+                keyCode == KeyEvent.KEYCODE_NUMPAD_DIVIDE;
+    }
+
+    private void handleCalculationModeToggle() {
+        isCalculationMode = !isCalculationMode;
+        // Set status awal
+        updateCalculatorModeStatus();
+        if (!isCalculationMode) {
+            processCalculation();
+        } else {
+            clearInputField();
+            pasteFromClipboard();
+        }
+    }
+
+    private void handleCalculationInput(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            int keyCode = event.getKeyCode();
+
+            // Handle input angka dan operator
+            if (isValidCalculationKey(keyCode)) {
+                char pressedChar = (char) event.getUnicodeChar();
+                calculationBuffer.append(pressedChar);
+            }
+        }
+    }
+
+    private void processCalculation() {
+        if (calculationBuffer.length() == 0) {
+            calculator.showError("Tidak ada perhitungan yang dimasukkan");
+            return;
+        }
+
+        String expression = calculationBuffer.toString();
+        calculationBuffer.setLength(0); // Reset buffer
+
+        String result = calculator.calculate(expression);
+        if (result != null) {
+            copyToClipboard(result);
+        }
+    }
+
+    private void copyToClipboard(String text) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("hasil_kalkulator", text);
+        clipboard.setPrimaryClip(clip);
+    }
+
+    private void clearInputField() {
+        // Simulasi tekan tombol CLEAR
+        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CLEAR));
+        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CLEAR));
+    }
+
+    private void pasteFromClipboard() {
+        // Simulasi tekan tombol PASTE
+        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PASTE));
+        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PASTE));
     }
 
     private void performAutoClick() {
@@ -1069,6 +1250,227 @@ public class StartWorking extends AppCompatActivity {
                 return true;
             }
         });
+
+        pointerPauseR.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Ambil jarak antara titik sentuh dan posisi ImageView
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        textPointerR.setVisibility(View.VISIBLE);
+                        textPointerR.setText("X: " + dX + " Y: " + dY);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Hitung posisi baru berdasarkan titik sentuh
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+
+                        // Dapatkan batas root layout
+                        int rootWidth = viewGecko.getWidth();
+                        int rootHeight = viewGecko.getHeight();
+
+                        // Pastikan pointer tetap dalam batas
+                        if (newX < 0) newX = 0;
+                        if (newX + v.getWidth() > rootWidth) newX = rootWidth - v.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY + v.getHeight() > rootHeight) newY = rootHeight - v.getHeight();
+
+                        // Pindahkan pointer
+                        v.setX(newX);
+                        v.setY(newY);
+                        textPointerR.setText("X: " + newX + " Y: " + newY);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        // Simpan koordinat saat pointer dilepaskan
+                        lastX_pauseR = v.getX();
+                        lastY_pauseR = v.getY();
+                        savePointerPosition("pointerPauseRX", "pointerPauseRY", lastX_pauseR, lastY_pauseR);
+                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_pauseR + ", Y=" + lastY_pauseR);
+                        textPointerR.setText("X: " + lastX_pauseR + " Y: " + lastY_pauseR);
+                        // Simpan atau gunakan koordinat untuk kebutuhan Anda
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                textPointerR.setVisibility(View.GONE);
+                            }
+                        }, 1000);
+                        break;
+                }
+                return true;
+            }
+        });
+
+        pointerPauseL.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Ambil jarak antara titik sentuh dan posisi ImageView
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        textPointerL.setVisibility(View.VISIBLE);
+                        textPointerL.setText("X: " + dX + " Y: " + dY);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Hitung posisi baru berdasarkan titik sentuh
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+
+                        // Dapatkan batas root layout
+                        int rootWidth = webViewTab1.getWidth();
+                        int rootHeight = webViewTab1.getHeight();
+
+                        // Pastikan pointer tetap dalam batas
+                        if (newX < 0) newX = 0;
+                        if (newX + v.getWidth() > rootWidth) newX = rootWidth - v.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY + v.getHeight() > rootHeight) newY = rootHeight - v.getHeight();
+
+                        // Pindahkan pointer
+                        v.setX(newX);
+                        v.setY(newY);
+                        textPointerL.setText("X: " + newX + " Y: " + newY);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        // Simpan koordinat saat pointer dilepaskan
+                        lastX_pauseL = v.getX();
+                        lastY_pauseL = v.getY();
+                        savePointerPosition("pointerPauseLX", "pointerPauseLY", lastX_pauseL, lastY_pauseL);
+                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_pauseL + ", Y=" + lastY_pauseL);
+                        textPointerL.setText("X: " + lastX_pauseL + " Y: " + lastY_pauseL);
+                        // Simpan atau gunakan koordinat untuk kebutuhan Anda
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                textPointerL.setVisibility(View.GONE);
+                            }
+                        }, 1000);
+                        break;
+                }
+                return true;
+            }
+        });
+
+        pointerCloseR.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Ambil jarak antara titik sentuh dan posisi ImageView
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        textPointerR.setVisibility(View.VISIBLE);
+                        textPointerR.setText("X: " + dX + " Y: " + dY);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Hitung posisi baru berdasarkan titik sentuh
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+
+                        // Dapatkan batas root layout
+                        int rootWidth = viewGecko.getWidth();
+                        int rootHeight = viewGecko.getHeight();
+
+                        // Pastikan pointer tetap dalam batas
+                        if (newX < 0) newX = 0;
+                        if (newX + v.getWidth() > rootWidth) newX = rootWidth - v.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY + v.getHeight() > rootHeight) newY = rootHeight - v.getHeight();
+
+                        // Pindahkan pointer
+                        v.setX(newX);
+                        v.setY(newY);
+                        textPointerR.setText("X: " + newX + " Y: " + newY);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        // Simpan koordinat saat pointer dilepaskan
+                        lastX_closeR = v.getX();
+                        lastY_closeR = v.getY();
+                        savePointerPosition("pointerCloseRX", "pointerCloseRY", lastX_closeR, lastY_closeR);
+                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_closeR + ", Y=" + lastY_closeR);
+                        textPointerR.setText("X: " + lastX_closeR + " Y: " + lastY_closeR);
+                        // Simpan atau gunakan koordinat untuk kebutuhan Anda
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                textPointerR.setVisibility(View.GONE);
+                            }
+                        }, 1000);
+                        break;
+                }
+                return true;
+            }
+        });
+
+        pointerCloseL.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Ambil jarak antara titik sentuh dan posisi ImageView
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        textPointerL.setVisibility(View.VISIBLE);
+                        textPointerL.setText("X: " + dX + " Y: " + dY);
+                        break;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Hitung posisi baru berdasarkan titik sentuh
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+
+                        // Dapatkan batas root layout
+                        int rootWidth = webViewTab1.getWidth();
+                        int rootHeight = webViewTab1.getHeight();
+
+                        // Pastikan pointer tetap dalam batas
+                        if (newX < 0) newX = 0;
+                        if (newX + v.getWidth() > rootWidth) newX = rootWidth - v.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY + v.getHeight() > rootHeight) newY = rootHeight - v.getHeight();
+
+                        // Pindahkan pointer
+                        v.setX(newX);
+                        v.setY(newY);
+                        textPointerL.setText("X: " + newX + " Y: " + newY);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        // Simpan koordinat saat pointer dilepaskan
+                        lastX_closeL = v.getX();
+                        lastY_closeL = v.getY();
+                        savePointerPosition("pointerCloseLX", "pointerCloseLY", lastX_closeL, lastY_closeL);
+                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_closeL + ", Y=" + lastY_closeL);
+                        textPointerL.setText("X: " + lastX_closeL + " Y: " + lastX_closeL);
+                        // Simpan atau gunakan koordinat untuk kebutuhan Anda
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                textPointerL.setVisibility(View.GONE);
+                            }
+                        }, 1000);
+                        break;
+                }
+                return true;
+            }
+        });
+
 
     }
 
