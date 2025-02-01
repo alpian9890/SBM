@@ -129,9 +129,9 @@ public class StartWorking extends AppCompatActivity {
 
     // Buat instance UrlValidator
     private UrlValidator urlValidator = new UrlValidator();
-    private CalculatorPusing calculator;
     private boolean isCalculationMode = false;
-    private StringBuilder calculationBuffer = new StringBuilder();
+    CalculatorSetress calculatorSetress;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,7 +143,8 @@ public class StartWorking extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_start_working);
 
-        calculator = new CalculatorPusing(this);
+        calculatorSetress = new CalculatorSetress(this);
+
         textCalculatorMode = findViewById(R.id.textCalculatorMode);
         // Set status awal
         updateCalculatorModeStatus();
@@ -159,6 +160,22 @@ public class StartWorking extends AppCompatActivity {
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
+        FloatingActionButton testShortCut = findViewById(R.id.testCalc);
+        testShortCut.setOnClickListener(v -> {
+            new Thread(() -> {
+
+                try {
+                    sendKeyEvent(KeyEvent.KEYCODE_A, true);
+                    Thread.sleep(100);
+                    sendKeyEvent(KeyEvent.KEYCODE_X, true);
+                    Thread.sleep(160);
+                    processCalculation();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+
+        });
 
         pBarTab1 = findViewById(R.id.pBarTab1);
         pBarTab2 = findViewById(R.id.pBarTab2);
@@ -479,12 +496,18 @@ public class StartWorking extends AppCompatActivity {
                     event.getAction() == KeyEvent.ACTION_DOWN &&
                             event.isCtrlPressed() &&
                             event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE ) {
-                handleCalculationModeToggle();
-                return true;
-            }
+                new Thread(() -> {
 
-            if (isCalculationMode) {
-                handleCalculationInput(event);
+                    try {
+                        sendKeyEvent(KeyEvent.KEYCODE_A, true);
+                        Thread.sleep(100);
+                        sendKeyEvent(KeyEvent.KEYCODE_X, true);
+                        Thread.sleep(160);
+                        processCalculation();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
                 return true;
             }
 
@@ -503,67 +526,64 @@ public class StartWorking extends AppCompatActivity {
         }
     }
 
-    private boolean isValidCalculationKey(int keyCode) {
-        // Validasi keycode yang diizinkan: angka, operator, dan titik desimal
-        return (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_0 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_1 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_2 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_3 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_4 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_5 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_6 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_7 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_8 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_9 ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_DOT ||
-                keyCode == KeyEvent.KEYCODE_PLUS ||
-                keyCode == KeyEvent.KEYCODE_MINUS ||
-                keyCode == KeyEvent.KEYCODE_STAR ||
-                keyCode == KeyEvent.KEYCODE_SLASH ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_ADD ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_SUBTRACT ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_MULTIPLY ||
-                keyCode == KeyEvent.KEYCODE_NUMPAD_DIVIDE;
-    }
-
     private void handleCalculationModeToggle() {
         isCalculationMode = !isCalculationMode;
         // Set status awal
         updateCalculatorModeStatus();
         if (!isCalculationMode) {
-            processCalculation();
-        } else {
-            clearInputField();
-            pasteFromClipboard();
+            //processCalculation();
         }
     }
 
-    private void handleCalculationInput(KeyEvent event) {
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            int keyCode = event.getKeyCode();
+    private void sendKeyEvent(int keyCode, boolean withCtrl) {
+        runOnUiThread(() -> { // Bungkus dengan runOnUiThread
+            long eventTime = System.currentTimeMillis();
 
-            // Handle input angka dan operator
-            if (isValidCalculationKey(keyCode)) {
-                char pressedChar = (char) event.getUnicodeChar();
-                calculationBuffer.append(pressedChar);
+            KeyEvent pressEvent = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0,
+                    withCtrl ? KeyEvent.META_CTRL_ON : 0);
+            dispatchKeyEvent(pressEvent);
+
+            KeyEvent releaseEvent = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0,
+                    withCtrl ? KeyEvent.META_CTRL_ON : 0);
+            dispatchKeyEvent(releaseEvent);
+        });
+    }
+
+    private void processCalculation() {
+        if (getClipboardData().isEmpty()) {
+            calculatorSetress.showError("Tidak ada perhitungan yang dimasukkan");
+            return;
+        }
+
+        String input = getClipboardData();
+        if (input != null) {
+            try {
+                String result = calculatorSetress.calculate(input);
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(100);
+                        copyToClipboard(result);
+                        Thread.sleep(100);
+                        sendKeyEvent(KeyEvent.KEYCODE_V, true);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            } catch (Exception e) {
+                Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    private void processCalculation() {
-        if (calculationBuffer.length() == 0) {
-            calculator.showError("Tidak ada perhitungan yang dimasukkan");
-            return;
+    private String getClipboardData() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard.hasPrimaryClip() &&
+                clipboard.getPrimaryClipDescription() != null &&
+                clipboard.getPrimaryClipDescription().hasMimeType("text/plain")) {
+            ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+            return item.getText().toString(); // Ambil teks dari clipboard
         }
-
-        String expression = calculationBuffer.toString();
-        calculationBuffer.setLength(0); // Reset buffer
-
-        String result = calculator.calculate(expression);
-        if (result != null) {
-            copyToClipboard(result);
-        }
+        return ""; // Jika clipboard kosong atau tidak ada data teks
     }
 
     private void copyToClipboard(String text) {
@@ -573,15 +593,17 @@ public class StartWorking extends AppCompatActivity {
     }
 
     private void clearInputField() {
-        // Simulasi tekan tombol CLEAR
-        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CLEAR));
-        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CLEAR));
+        runOnUiThread(() -> {
+            dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CLEAR));
+            dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CLEAR));
+        });
     }
 
     private void pasteFromClipboard() {
-        // Simulasi tekan tombol PASTE
-        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PASTE));
-        dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PASTE));
+        runOnUiThread(() -> {
+            dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PASTE));
+            dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PASTE));
+        });
     }
 
     private void performAutoClick() {
