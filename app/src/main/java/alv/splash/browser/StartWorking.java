@@ -95,6 +95,21 @@ public class StartWorking extends AppCompatActivity {
 
     BottomSheetDialog bottomSheetDialog;
 
+    private static final String KEY_POINTER_RIGHT_X = "pointerRightX";
+    private static final String KEY_POINTER_RIGHT_Y = "pointerRightY";
+    private static final String KEY_POINTER_PAUSE_R_X = "pointerPauseRX";
+    private static final String KEY_POINTER_PAUSE_R_Y = "pointerPauseRY";
+    private static final String KEY_POINTER_CLOSE_R_X = "pointerCloseRX";
+    private static final String KEY_POINTER_CLOSE_R_Y = "pointerCloseRY";
+
+    private static final String KEY_POINTER_LEFT_X = "pointerLeftX";
+    private static final String KEY_POINTER_LEFT_Y = "pointerLeftY";
+    private static final String KEY_POINTER_PAUSE_L_X = "pointerPauseLX";
+    private static final String KEY_POINTER_PAUSE_L_Y = "pointerPauseLY";
+    private static final String KEY_POINTER_CLOSE_L_X = "pointerCloseLX";
+    private static final String KEY_POINTER_CLOSE_L_Y = "pointerCloseLY";
+
+
     float lastX_right, lastY_right, lastX_left, lastY_left,
           lastX_pauseR, lastY_pauseR, lastX_pauseL, lastY_pauseL,
           lastX_closeR, lastY_closeR, lastX_closeL, lastY_closeL;;
@@ -152,10 +167,6 @@ public class StartWorking extends AppCompatActivity {
         webViewTab1 = findViewById(R.id.webViewTab1);
         new AdBlockerWebView.init(this).initializeWebView(webViewTab1);
 
-        pointerPauseR = findViewById(R.id.pointerPauseR);
-        pointerPauseL = findViewById(R.id.pointerPauseL);
-        pointerCloseR = findViewById(R.id.pointerCloseR);
-        pointerCloseL = findViewById(R.id.pointerCloseL);
 
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
@@ -371,6 +382,11 @@ public class StartWorking extends AppCompatActivity {
 
         pointerRight = findViewById(R.id.pointerRight);
         pointerLeft = findViewById(R.id.pointerLeft);
+        pointerPauseR = findViewById(R.id.pointerPauseR);
+        pointerPauseL = findViewById(R.id.pointerPauseL);
+        pointerCloseR = findViewById(R.id.pointerCloseR);
+        pointerCloseL = findViewById(R.id.pointerCloseL);
+
         textPointerR = findViewById(R.id.textPointerR);
         textPointerL = findViewById(R.id.textPointerL);
 		
@@ -413,27 +429,29 @@ public class StartWorking extends AppCompatActivity {
         rootViewSW.post(() -> {
             setupPointerMovement();
 
-            float[] pointerRightPos = loadPointerPosition("pointerRightX", "pointerRightY");
+            //Pointer right tab
+            float[] pointerRightPos = loadPointerPosition(KEY_POINTER_RIGHT_X, KEY_POINTER_RIGHT_Y);
             pointerRight.setX(Math.max(0, Math.min(pointerRightPos[0], viewGecko.getWidth() - pointerRight.getWidth())));
             pointerRight.setY(Math.max(0, Math.min(pointerRightPos[1], viewGecko.getHeight() - pointerRight.getHeight())));
 
-            float[] pointerPauseRPos = loadPointerPosition("pointerPauseRX", "pointerPauseRY");
-            pointerRight.setX(Math.max(0, Math.min(pointerPauseRPos[0], viewGecko.getWidth() - pointerPauseR.getWidth())));
-            pointerRight.setY(Math.max(0, Math.min(pointerPauseRPos[1], viewGecko.getHeight() - pointerPauseR.getHeight())));
+            float[] pointerPauseRPos = loadPointerPosition(KEY_POINTER_PAUSE_R_X, KEY_POINTER_PAUSE_R_Y);
+            pointerPauseR.setX(Math.max(0, Math.min(pointerPauseRPos[0], viewGecko.getWidth() - pointerPauseR.getWidth())));
+            pointerPauseR.setY(Math.max(0, Math.min(pointerPauseRPos[1], viewGecko.getHeight() - pointerPauseR.getHeight())));
 
-            float[] pointerCloseRPos = loadPointerPosition("pointerCloseRX", "pointerCloseRY");
+            float[] pointerCloseRPos = loadPointerPosition(KEY_POINTER_CLOSE_R_X, KEY_POINTER_CLOSE_R_Y);
             pointerCloseR.setX(Math.max(0, Math.min(pointerCloseRPos[0], viewGecko.getWidth() - pointerCloseR.getWidth())));
             pointerCloseR.setY(Math.max(0, Math.min(pointerCloseRPos[1], viewGecko.getHeight() - pointerCloseR.getHeight())));
 
-            float[] pointerLeftPos = loadPointerPosition("pointerLeftX", "pointerLeftY");
+            //Pointer left tab
+            float[] pointerLeftPos = loadPointerPosition(KEY_POINTER_LEFT_X, KEY_POINTER_LEFT_Y);
             pointerLeft.setX(Math.max(0, Math.min(pointerLeftPos[0], webViewTab1.getWidth() - pointerLeft.getWidth())));
             pointerLeft.setY(Math.max(0, Math.min(pointerLeftPos[1], webViewTab1.getHeight() - pointerLeft.getHeight())));
 
-            float[] pointerPauseLPos = loadPointerPosition("pointerPauseLX", "pointerPauseLY");
+            float[] pointerPauseLPos = loadPointerPosition(KEY_POINTER_PAUSE_L_X, KEY_POINTER_PAUSE_L_Y);
             pointerPauseL.setX(Math.max(0, Math.min(pointerPauseLPos[0], webViewTab1.getWidth() - pointerPauseL.getWidth())));
             pointerPauseL.setY(Math.max(0, Math.min(pointerPauseLPos[1], webViewTab1.getHeight() - pointerPauseL.getHeight())));
 
-            float[] pointerCloseLPos = loadPointerPosition("pointerCloseLX", "pointerCloseLX");
+            float[] pointerCloseLPos = loadPointerPosition(KEY_POINTER_CLOSE_L_X, KEY_POINTER_CLOSE_L_Y);
             pointerCloseL.setX(Math.max(0, Math.min(pointerCloseLPos[0], webViewTab1.getWidth() - pointerCloseL.getWidth())));
             pointerCloseL.setY(Math.max(0, Math.min(pointerCloseLPos[1], webViewTab1.getHeight() - pointerCloseL.getHeight())));
 
@@ -446,6 +464,12 @@ public class StartWorking extends AppCompatActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                event.isCtrlPressed() &&
+                event.getKeyCode() == KeyEvent.KEYCODE_SPACE) {
+            showBottomSheet();
+        }
+
         if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
 
             if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
@@ -1201,7 +1225,7 @@ public class StartWorking extends AppCompatActivity {
                         // Simpan koordinat saat pointer dilepaskan
                         lastX_right = v.getX();
                         lastY_right = v.getY();
-                        savePointerPosition("pointerRightX", "pointerRightY", lastX_right, lastY_right);
+                        savePointerPosition(KEY_POINTER_RIGHT_X, KEY_POINTER_RIGHT_Y, lastX_right, lastY_right);
                         Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_right + ", Y=" + lastY_right);
                         textPointerR.setText("X: " + lastX_right + " Y: " + lastY_right);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
@@ -1256,7 +1280,7 @@ public class StartWorking extends AppCompatActivity {
                         // Simpan koordinat saat pointer dilepaskan
                         lastX_left = v.getX();
                         lastY_left = v.getY();
-                        savePointerPosition("pointerLeftX", "pointerLeftY", lastX_left, lastY_left);
+                        savePointerPosition(KEY_POINTER_LEFT_X, KEY_POINTER_LEFT_Y, lastX_left, lastY_left);
                         Log.d("PointerMovement", "Saved pointerLeft: X=" + lastX_left + ", Y=" + lastY_left);
                         textPointerL.setText("X: " + lastX_left + " Y: " + lastY_left);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
@@ -1312,8 +1336,8 @@ public class StartWorking extends AppCompatActivity {
                         // Simpan koordinat saat pointer dilepaskan
                         lastX_pauseR = v.getX();
                         lastY_pauseR = v.getY();
-                        savePointerPosition("pointerPauseRX", "pointerPauseRY", lastX_pauseR, lastY_pauseR);
-                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_pauseR + ", Y=" + lastY_pauseR);
+                        savePointerPosition(KEY_POINTER_PAUSE_R_X, KEY_POINTER_PAUSE_R_Y, lastX_pauseR, lastY_pauseR);
+                        Log.d("PointerMovement", "Saved pointerPauseR: X=" + lastX_pauseR + ", Y=" + lastY_pauseR);
                         textPointerR.setText("X: " + lastX_pauseR + " Y: " + lastY_pauseR);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
                         new Handler().postDelayed(new Runnable() {
@@ -1367,8 +1391,8 @@ public class StartWorking extends AppCompatActivity {
                         // Simpan koordinat saat pointer dilepaskan
                         lastX_pauseL = v.getX();
                         lastY_pauseL = v.getY();
-                        savePointerPosition("pointerPauseLX", "pointerPauseLY", lastX_pauseL, lastY_pauseL);
-                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_pauseL + ", Y=" + lastY_pauseL);
+                        savePointerPosition(KEY_POINTER_PAUSE_L_X, KEY_POINTER_PAUSE_L_Y, lastX_pauseL, lastY_pauseL);
+                        Log.d("PointerMovement", "Saved pointerPauseL: X=" + lastX_pauseL + ", Y=" + lastY_pauseL);
                         textPointerL.setText("X: " + lastX_pauseL + " Y: " + lastY_pauseL);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
                         new Handler().postDelayed(new Runnable() {
@@ -1422,8 +1446,8 @@ public class StartWorking extends AppCompatActivity {
                         // Simpan koordinat saat pointer dilepaskan
                         lastX_closeR = v.getX();
                         lastY_closeR = v.getY();
-                        savePointerPosition("pointerCloseRX", "pointerCloseRY", lastX_closeR, lastY_closeR);
-                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_closeR + ", Y=" + lastY_closeR);
+                        savePointerPosition(KEY_POINTER_CLOSE_R_X, KEY_POINTER_CLOSE_R_Y, lastX_closeR, lastY_closeR);
+                        Log.d("PointerMovement", "Saved pointerCloseR: X=" + lastX_closeR + ", Y=" + lastY_closeR);
                         textPointerR.setText("X: " + lastX_closeR + " Y: " + lastY_closeR);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
                         new Handler().postDelayed(new Runnable() {
@@ -1477,8 +1501,8 @@ public class StartWorking extends AppCompatActivity {
                         // Simpan koordinat saat pointer dilepaskan
                         lastX_closeL = v.getX();
                         lastY_closeL = v.getY();
-                        savePointerPosition("pointerCloseLX", "pointerCloseLY", lastX_closeL, lastY_closeL);
-                        Log.d("PointerMovement", "Saved pointerRight: X=" + lastX_closeL + ", Y=" + lastY_closeL);
+                        savePointerPosition(KEY_POINTER_CLOSE_L_X, KEY_POINTER_CLOSE_L_Y, lastX_closeL, lastY_closeL);
+                        Log.d("PointerMovement", "Saved pointerCloseL: X=" + lastX_closeL + ", Y=" + lastY_closeL);
                         textPointerL.setText("X: " + lastX_closeL + " Y: " + lastX_closeL);
                         // Simpan atau gunakan koordinat untuk kebutuhan Anda
                         new Handler().postDelayed(new Runnable() {
