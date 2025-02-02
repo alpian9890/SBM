@@ -19,7 +19,6 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -27,7 +26,6 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.MotionEvent;
-import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -41,14 +39,11 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.ToggleButton;
 
-import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -79,7 +74,8 @@ public class StartWorking extends AppCompatActivity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 100;
     FloatingActionButton fabControl;
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
-    TextView titleTab1, titleTab2, textCalculatorMode;
+    TextView titleTab1;
+    TextView titleTab2;
     ProgressBar pBarTab1, pBarTab2;
     LinearLayout layoutAddressBar1, layoutAddressBar2;
     TextInputLayout etLayout1, etLayout2, etLayoutTitleKB;
@@ -160,10 +156,6 @@ public class StartWorking extends AppCompatActivity {
 
         calculatorSetress = new CalculatorSetress(this);
 
-        textCalculatorMode = findViewById(R.id.textCalculatorMode);
-        // Set status awal
-        updateCalculatorModeStatus();
-
         webViewTab1 = findViewById(R.id.webViewTab1);
         new AdBlockerWebView.init(this).initializeWebView(webViewTab1);
 
@@ -171,22 +163,6 @@ public class StartWorking extends AppCompatActivity {
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
-        FloatingActionButton testShortCut = findViewById(R.id.testCalc);
-        testShortCut.setOnClickListener(v -> {
-            new Thread(() -> {
-
-                try {
-                    sendKeyEvent(KeyEvent.KEYCODE_A, true);
-                    Thread.sleep(100);
-                    sendKeyEvent(KeyEvent.KEYCODE_X, true);
-                    Thread.sleep(160);
-                    processCalculation();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }).start();
-
-        });
 
         pBarTab1 = findViewById(R.id.pBarTab1);
         pBarTab2 = findViewById(R.id.pBarTab2);
@@ -468,6 +444,7 @@ public class StartWorking extends AppCompatActivity {
                 event.isCtrlPressed() &&
                 event.getKeyCode() == KeyEvent.KEYCODE_SPACE) {
             showBottomSheet();
+            return true;
         }
 
         if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
@@ -504,12 +481,14 @@ public class StartWorking extends AppCompatActivity {
                         event.isAltPressed() &&
                         event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7) {
                     simulateTouch(webViewTab1, lastX_closeL, lastY_closeL);
+                    return true;
                 }
                 if (event.getAction() == KeyEvent.ACTION_DOWN &&
                         event.isCtrlPressed() &&
                         event.isAltPressed() &&
                         event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_9) {
                     simulateTouch(viewGecko, lastX_closeR, lastY_closeR);
+                    return true;
                 }
 
             }
@@ -539,21 +518,10 @@ public class StartWorking extends AppCompatActivity {
         return super.dispatchKeyEvent(event);
     }
 
-    private void updateCalculatorModeStatus() {
-        // Update text dan warna background berdasarkan status mode
-        if (isCalculationMode) {
-            textCalculatorMode.setText("Calculator: ON");
-            textCalculatorMode.setBackgroundColor(getResources().getColor(R.color.green));
-        } else {
-            textCalculatorMode.setText("Calculator: OFF");
-            textCalculatorMode.setTextColor(getResources().getColor(R.color.red));
-        }
-    }
-
     private void handleCalculationModeToggle() {
         isCalculationMode = !isCalculationMode;
         // Set status awal
-        updateCalculatorModeStatus();
+
         if (!isCalculationMode) {
             //processCalculation();
         }
