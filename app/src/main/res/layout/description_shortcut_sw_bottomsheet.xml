@@ -7,6 +7,75 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Search Engine Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Search Engine :"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /bi (Bing)"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /br (Brave)"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /dg (DuckDuckGo)"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /go (Google) [default]"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /rd (Reddit)"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /sp (Start Page)"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="• /wp (Wikipedia)"
+        android:textColor="#FFFF00"
+        android:fontFamily="monospace"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"/>
+
+
     <!-- On/Off Calculator Section -->
     <TextView
         android:layout_width="match_parent"
@@ -24,8 +93,7 @@
         android:text="• CTRL + ESC"
         android:textColor="#FFFF00"
         android:fontFamily="monospace"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginStart="16dp"/>
 
     <TextView
         android:layout_width="match_parent"

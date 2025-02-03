@@ -447,6 +447,28 @@ public class StartWorking extends AppCompatActivity {
             return true;
         }
 
+        if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                event.isCtrlPressed() &&
+                event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_DOT ||
+                event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() &&
+                        event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE ) {
+            new Thread(() -> {
+
+                try {
+                    sendKeyEvent(KeyEvent.KEYCODE_A, true);
+                    Thread.sleep(100);
+                    sendKeyEvent(KeyEvent.KEYCODE_X, true);
+                    Thread.sleep(160);
+                    processCalculation();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+            return true;
+        }
+
+
         if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
 
             if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
@@ -491,30 +513,11 @@ public class StartWorking extends AppCompatActivity {
                     return true;
                 }
 
-            }
+            }// End page title kb
 
-            if (event.getAction() == KeyEvent.ACTION_DOWN &&
-                    event.isCtrlPressed() &&
-                    event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_DOT ||
-                    event.getAction() == KeyEvent.ACTION_DOWN &&
-                            event.isCtrlPressed() &&
-                            event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE ) {
-                new Thread(() -> {
+        }// end kolotibablo.com
 
-                    try {
-                        sendKeyEvent(KeyEvent.KEYCODE_A, true);
-                        Thread.sleep(100);
-                        sendKeyEvent(KeyEvent.KEYCODE_X, true);
-                        Thread.sleep(160);
-                        processCalculation();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }).start();
-                return true;
-            }
 
-        }
         return super.dispatchKeyEvent(event);
     }
 

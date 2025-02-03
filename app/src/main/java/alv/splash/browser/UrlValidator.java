@@ -34,7 +34,53 @@ public class UrlValidator {
             return "https://" + query;
         } else {
             // Jika tidak ada protocol dan domain, perlakukan sebagai search query
-            return "https://www.google.com/search?q=" + Uri.encode(query);
+            if (query.startsWith("about:")) {
+                return query;
+            } else if (query.startsWith("/")) {
+                if (query.contains("Sarang Monyet") || query.contains("sarang monyet")) {
+                    return "https://www.tiktok.com/";
+                } else if (query.equals("/Youtube") || query.equals("/youtube") || query.equals("/yt")) {
+                    return "https://www.youtube.com/";
+                } else if (query.equals("/Instagram") || query.equals("/instagram") || query.equals("/ig")) {
+                    return "https://www.instagram.com/";
+                } else if (query.equals("/Facebook") || query.equals("/facebook") || query.equals("/fb")) {
+                    return "https://www.facebook.com/";
+                } else if (query.equals("/Twitter") || query.equals("/twitter") || query.equals("/tw")) {
+                    return "https://www.twitter.com/";
+                } else if (query.startsWith("/go")) {
+                    query = query.substring(3).trim(); // Hapus "/go" hanya jika di awal
+                    return "https://www.google.com/search?q=" + Uri.encode(query);
+                } else if (query.startsWith("/bi")) {
+                    query = query.substring(3).trim();
+                    return "https://www.bing.com/search?&q=" + Uri.encode(query);
+                } else if (query.startsWith("/dg")) {
+                    query = query.substring(3).trim();
+                    return "https://www.duckduckgo.com/html/?q=" + Uri.encode(query);
+                } else if (query.startsWith("/sp")) {
+                    query = query.substring(3).trim();
+                    return "https://www.startpage.com/sp/search?query=" + Uri.encode(query);
+                } else if (query.startsWith("/wp")) {
+                    query = query.substring(3).trim();
+                    return "https://www.wikipedia.org/wiki/Special:Search?search=" + Uri.encode(query);
+                } else if (query.startsWith("/rd")) {
+                    query = query.substring(3).trim();
+                    return "https://www.reddit.com/search/?q=" + Uri.encode(query);
+                }  else if (query.startsWith("/br")) {
+                    query = query.substring(3).trim();
+                    return "https://search.brave.com/search?q=" + Uri.encode(query);
+                } else {
+                    return "https://www.google.com/search?q=" + Uri.encode(query);
+                }
+
+
+
+
+            } else {
+                //default
+                return "https://www.google.com/search?q=" + Uri.encode(query);
+            }
+
+            //return "https://www.google.com/search?q=" + Uri.encode(query);
         }
     }
 }

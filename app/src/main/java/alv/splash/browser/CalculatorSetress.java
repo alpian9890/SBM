@@ -1,11 +1,10 @@
 package alv.splash.browser;
 
-import net.objecthunter.exp4j.Expression;
-import net.objecthunter.exp4j.ExpressionBuilder;
-
 import android.app.Activity;
 import android.content.Context;
 import android.widget.Toast;
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
 
 public class CalculatorSetress {
     private final Context context;
@@ -25,6 +24,7 @@ public class CalculatorSetress {
             String processedInput = processInput(input);
             return evaluateExpression(processedInput);
         } catch (Exception e) {
+            showError(e.getMessage()); // Tampilkan error ke user
             return "Error: " + e.getMessage();
         }
     }
@@ -35,7 +35,8 @@ public class CalculatorSetress {
         }
 
         String sanitized = sanitizeInput(input);
-        String normalized = normalizePercent(sanitized);
+        String processedE = processScientificNotation(sanitized);
+        String normalized = normalizePercent(processedE);
         String withOperators = addImplicitOperators(normalized);
         validateInput(withOperators);
 
@@ -49,8 +50,13 @@ public class CalculatorSetress {
                 .replaceAll("\\s+", "");
     }
 
+    private String processScientificNotation(String input) {
+        // Handle notasi ilmiah (e.g., 3E5 -> 3*10^5, 2.5E-3 -> 2.5*10^-3)
+        return input.replaceAll("([\\d.]+)E([+-]?\\d+)", "($1*10^$2)");
+    }
+
     private String normalizePercent(String input) {
-        return input.replaceAll("([\\d\\.]+)%", "($1/100)");
+        return input.replaceAll("([\\d.]+)%", "($1/100)");
     }
 
     private String addImplicitOperators(String input) {
@@ -60,12 +66,12 @@ public class CalculatorSetress {
     }
 
     private void validateInput(String input) throws Exception {
-        if (!input.matches("^[\\d\\+\\-*/()\\.]+$")) {
+        // Izinkan karakter ^ untuk pangkat
+        if (!input.matches("^[\\d\\+\\-*/()\\.^]+$")) {
             throw new IllegalArgumentException("Karakter tidak valid");
         }
 
         validateParentheses(input);
-        validateExpressionStructure(input);
     }
 
     private void validateParentheses(String input) throws Exception {
@@ -77,12 +83,6 @@ public class CalculatorSetress {
         }
         if (count != 0) {
             throw new IllegalArgumentException("Tanda kurung tidak seimbang");
-        }
-    }
-
-    private void validateExpressionStructure(String input) throws Exception {
-        if (input.matches(".*[+\\-*/]{2,}.*")) {
-            throw new IllegalArgumentException("Format operator tidak valid");
         }
     }
 
@@ -100,9 +100,9 @@ public class CalculatorSetress {
 
             return formatResult(result);
         } catch (ArithmeticException e) {
-            throw new ArithmeticException("Perhitungan tidak valid");
+            throw new ArithmeticException("Perhitungan tidak valid: " + e.getMessage());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Ekspresi tidak dapat diproses");
+            throw new IllegalArgumentException("Ekspresi tidak dapat diproses: " + e.getMessage());
         }
     }
 
@@ -110,7 +110,9 @@ public class CalculatorSetress {
         if (result % 1 == 0) {
             return String.valueOf((long) result);
         } else {
-            return String.valueOf(result).replaceAll("0+$", "").replaceAll("\\.$", "");
+            // Hapus trailing zeros dan titik desimal jika perlu
+            return String.valueOf(result)
+                    .replaceAll("\\.?0+$", "");
         }
     }
 }
