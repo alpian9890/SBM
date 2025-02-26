@@ -68,7 +68,10 @@ public class UrlValidator {
                 }  else if (query.startsWith("/br")) {
                     query = query.substring(3).trim();
                     return "https://search.brave.com/search?q=" + Uri.encode(query);
-                } else {
+                } else if (query.startsWith("/kb")) {
+                    query = query.substring(3).trim();
+                    return "https://kolotibablo.com/";
+                } else{
                     return "https://www.google.com/search?q=" + Uri.encode(query);
                 }
 

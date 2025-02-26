@@ -61,6 +61,7 @@ import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.GeckoView;
 
 import java.util.List;
+import java.util.Locale;
 
 public class StartWorking extends AppCompatActivity {
 
@@ -143,6 +144,14 @@ public class StartWorking extends AppCompatActivity {
     private boolean isCalculationMode = false;
     CalculatorSetress calculatorSetress;
 
+    private Handler handler = new Handler();
+    private long startTime;
+    private int totalKata = 0;
+    private boolean isTesting = false;
+
+    ToggleButton btnPlayPauseWPM;
+    TextView speedTestWPM;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -195,6 +204,23 @@ public class StartWorking extends AppCompatActivity {
         editTextTitleKB.setText(title_earning);
 
         loadTitleKB(title_earning);
+
+        btnPlayPauseWPM = bottomSheetDialog.findViewById(R.id.btnPlayPauseWPM);
+        speedTestWPM = bottomSheetDialog.findViewById(R.id.speedTestWPM);
+
+        btnPlayPauseWPM.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // Mulai test
+                startTime = System.currentTimeMillis();
+                totalKata = 0;
+                isTesting = true;
+                handler.post(updateWPMLoop); // Mulai perhitungan WPM
+            } else {
+                // Hentikan test
+                isTesting = false;
+                handler.removeCallbacks(updateWPMLoop);
+            }
+        });
 
         btnSaveTitle.setOnClickListener(v -> {
             title_earning = editTextTitleKB.getText().toString().trim();
@@ -438,6 +464,25 @@ public class StartWorking extends AppCompatActivity {
 
     }// akhir onCreate
 
+    private Runnable updateWPMLoop = new Runnable() {
+        @Override
+        public void run() {
+            if (isTesting) {
+                long currentTime = System.currentTimeMillis();
+                double elapsedMinutes = (currentTime - startTime) / 60000.0;
+
+                // Hindari pembagian dengan nol (minimal 1 detik)
+                if (elapsedMinutes == 0) elapsedMinutes = 1 / 60.0;
+
+                double wpm = totalKata / elapsedMinutes;
+                String formattedWPM = String.format(Locale.getDefault(), "%.2f", wpm);
+                speedTestWPM.setText(formattedWPM + " WPM");
+
+                handler.postDelayed(this, 1000); // Update setiap 1 detik
+            }
+        }
+    };
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN &&
@@ -447,6 +492,7 @@ public class StartWorking extends AppCompatActivity {
             return true;
         }
 
+        // Mode Calculator
         if (event.getAction() == KeyEvent.ACTION_DOWN &&
                 event.isCtrlPressed() &&
                 event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_DOT ||
@@ -468,12 +514,23 @@ public class StartWorking extends AppCompatActivity {
             return true;
         }
 
+        if (isTesting && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+            // Tangani tombol ENTER dengan ACTION_UP
+            super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+            totalKata++;
+            if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")) {
+                if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
+                    new Handler().postDelayed(() -> performAutoClick(), 200);
+                }
+            }
+            return true;
+        }
 
         if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
 
             if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
 
-                if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+                if (!isTesting && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
                     // Tangani tombol ENTER dengan ACTION_UP
                     super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
                     new Handler().postDelayed(() -> performAutoClick(), 200);
@@ -481,9 +538,24 @@ public class StartWorking extends AppCompatActivity {
                 }
 
                 if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
-                    // Tangani tombol ENTER dengan ACTION_UP
+                    // Tangani tombol ESCAPE dengan ACTION_UP
                     super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE));
                     new Handler().postDelayed(() -> performAutoClick(), 300);
+                    return true;
+                }
+
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                    event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7) {
+                    webViewTab1.requestFocus(); // Root view batas pointerLeft
+                    simulateTouch(webViewTab1, lastX_left, lastY_left);
+                    toggleClick = true;
+                    return true;
+                }
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_9) {
+                    viewGecko.requestFocus(); // Root view batas pointerRight
+                    simulateTouch(viewGecko, lastX_right, lastY_right);
+                    toggleClick = false;
                     return true;
                 }
 
@@ -649,11 +721,11 @@ public class StartWorking extends AppCompatActivity {
 
         // Kirim event ke rootView
         rootView.dispatchTouchEvent(downEvent);
-        new Handler().postDelayed(() -> rootView.dispatchTouchEvent(upEvent), 150);
+        new Handler().postDelayed(() -> rootView.dispatchTouchEvent(upEvent), 180);
 
         // Release event
         downEvent.recycle();
-        new Handler().postDelayed(() -> upEvent.recycle(), 100);
+        new Handler().postDelayed(() -> upEvent.recycle(), 280);
     }
 
     private void simulateDoubleClick(View rootView, float x, float y) {
@@ -814,9 +886,9 @@ public class StartWorking extends AppCompatActivity {
             @Override
             public void onPageStop(@NonNull @NotNull GeckoSession session, boolean success) {
                 pBarTab2.setVisibility(View.GONE);
-                if (pageTitle2.contains("kolotibablo.com")) {
+                /*if (pageTitle2.contains("kolotibablo.com")) {
                     session.loadUri("javascript:"+injectInputKB);
-                }
+                }*/
             }
             @Override
             public void onProgressChange(GeckoSession session, int progress) {
@@ -958,9 +1030,9 @@ public class StartWorking extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                if (url.contains("kolotibablo.com")) {
+                /*if (url.contains("kolotibablo.com")) {
                     view.evaluateJavascript(injectInputKB, null);
-                }
+                }*/
 
             }
 

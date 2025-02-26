@@ -4,7 +4,7 @@ plugins {
 
 ext {
     geckoviewChannel = "geckoview"
-    geckoviewVersion = "133.0.20241202233018"
+    geckoviewVersion = "135.0.20250216192613" //Dec 2024 "133.0.20241202233018"
 }
 
 
@@ -16,8 +16,8 @@ android {
         applicationId "alv.splash.browser"
         minSdk 21
         targetSdk 35
-        versionCode 7
-        versionName "Edelweiss 7.5"
+        versionCode 8
+        versionName "Edelweiss 8.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
