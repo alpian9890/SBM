@@ -6,17 +6,20 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -26,6 +29,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.MotionEvent;
+import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -43,6 +47,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -60,11 +66,21 @@ import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.GeckoView;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 public class StartWorking extends AppCompatActivity {
 
+    private static final int STORAGE_PERMISSION_CODE = 101;
+    String image_captcha_name = UUID.randomUUID().toString() + ".png";
+    String ImgData_BASE64 = "";
+    String ImgData_LABEL = "";
     String KBEarn = "https://kolotibablo.com";
     ValueCallback<Uri[]> filePathCallback;
     String getUrl1 = "";
@@ -116,6 +132,22 @@ public class StartWorking extends AppCompatActivity {
     TextView textPointerR, textPointerL;
 
     private boolean toggleClick = true;
+
+    String inject4Datasets = "const targetNode = document.querySelector('body');"
+            + "const config = { attributes: true, childList: true, subtree: true };"
+            + "const callback = function(mutationsList, observer) {"
+            + "    mutationsList.forEach(mutation -> {"
+            + "        const div = document.querySelector('.captcha-image');"
+            + "        const input = document.querySelector('.inp-dft');"
+            + "        if (div && input) {"
+            + "            const imgData = div.style.backgroundImage.replace('url(\"','').replace('\")','');"
+            + "            Android.onDataDetected(imgData, input.value);"
+            + "        }"
+            + "    });"
+            + "};"
+            + "const observer = new MutationObserver(callback);"
+            + "observer.observe(targetNode, config);";
+
     String injectInputKB =
             "var observer = new MutationObserver(function(mutations) {" +
                     "    mutations.forEach(function(mutation) {" +
@@ -151,6 +183,10 @@ public class StartWorking extends AppCompatActivity {
 
     ToggleButton btnPlayPauseWPM;
     TextView speedTestWPM;
+
+    private String basePath = Environment.getExternalStorageDirectory() + "/Datasets";
+    private String imagesPath = basePath + "/Images";
+    private String csvPath = basePath + "/labels.csv";
 
 
     @Override
@@ -457,12 +493,68 @@ public class StartWorking extends AppCompatActivity {
             pointerCloseL.setX(Math.max(0, Math.min(pointerCloseLPos[0], webViewTab1.getWidth() - pointerCloseL.getWidth())));
             pointerCloseL.setY(Math.max(0, Math.min(pointerCloseLPos[1], webViewTab1.getHeight() - pointerCloseL.getHeight())));
 
+            checkPermissions();
 
         });
 
 
 
     }// akhir onCreate
+
+
+    private void checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        STORAGE_PERMISSION_CODE);
+            }
+        }
+    }
+
+    private void saveBase64Image(String base64Data, String fileName) {
+        try {
+            //byte[] decodedBytes = Base64.decode(base64Data.split(",")[1], Base64.DEFAULT);
+            byte[] decodedBytes = android.util.Base64.decode(
+                    base64Data.split(",")[1], android.util.Base64.DEFAULT
+            );
+            File dir = new File(imagesPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            File file = new File(dir, fileName);
+
+            // Cek versi Android
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Gunakan java.nio.file.Files.write() untuk API 26 ke atas
+                java.nio.file.Files.write(file.toPath(), decodedBytes);
+            } else {
+                // Gunakan FileOutputStream untuk API di bawah 26
+                FileOutputStream fos = new FileOutputStream(file);
+                fos.write(decodedBytes);
+                fos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error saving image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void saveToCsv(String imagePath, String label) {
+        try {
+            File file = new File(csvPath);
+            if (!file.getParentFile().exists()) file.getParentFile().mkdirs();
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
+            writer.write(imagePath + "," + label + "\n");
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private Runnable updateWPMLoop = new Runnable() {
         @Override
@@ -516,11 +608,18 @@ public class StartWorking extends AppCompatActivity {
 
         if (isTesting && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
             // Tangani tombol ENTER dengan ACTION_UP
-            super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+            //super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
             totalKata++;
             if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")) {
                 if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
-                    new Handler().postDelayed(() -> performAutoClick(), 200);
+                    new Thread(() -> {
+
+                        try {
+
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
                 }
             }
             return true;
@@ -938,6 +1037,17 @@ public class StartWorking extends AppCompatActivity {
         });
     }
 
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == STORAGE_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Izin penyimpanan diperlukan!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -1001,6 +1111,7 @@ public class StartWorking extends AppCompatActivity {
 
     private void setupWebViewClient() {
 
+
         webViewTab1.setWebViewClient(new WebViewClient() {
 
             @Override
@@ -1030,9 +1141,11 @@ public class StartWorking extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                /*if (url.contains("kolotibablo.com")) {
-                    view.evaluateJavascript(injectInputKB, null);
-                }*/
+                if (url.contains("kolotibablo.com")) {
+                    if (pageTitle1.equals(title_earning)) {
+                        view.evaluateJavascript(inject4Datasets, null);
+                    }
+                }
 
             }
 
@@ -1067,6 +1180,18 @@ public class StartWorking extends AppCompatActivity {
             }
         });
 
+        webViewTab1.addJavascriptInterface(new MyJavaScriptInterface(), "Android");
+
+    }
+
+    class MyJavaScriptInterface {
+        @JavascriptInterface
+        public void onDataDetected(String imageData, String label) {
+            if (!imageData.isEmpty() && !label.isEmpty()) {
+                ImgData_BASE64 = imageData;
+                ImgData_LABEL = label;
+            }
+        }
     }
 
     private void setupWebViewSettings() {
