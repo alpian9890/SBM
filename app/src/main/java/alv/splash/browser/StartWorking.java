@@ -615,7 +615,27 @@ public class StartWorking extends AppCompatActivity {
                     new Thread(() -> {
 
                         try {
-
+							if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)){
+							    if (!ImgData_BASE64.isEmpty() && !ImgData_LABEL.isEmpty()) {
+									saveBase64Image(ImgData_BASE64, image_captcha_name);
+									saveToCsv("Images/"+image_captcha_name, ImgData_LABEL);
+									Thread.sleep(300);
+									super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+									Thread.sleep(150);
+									performAutoClick();
+								} else {
+									super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+									Thread.sleep(190);
+									performAutoClick();
+								}
+							} else 
+								if (getUrl2.contains("kolotibablo.com") && pageTitle2.contains(title_earning)){
+							    
+									super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+									Thread.sleep(200);
+									performAutoClick();
+								
+							}
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
