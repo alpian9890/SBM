@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="black_overlay">#66000000</color>
+    <color name="green">#FF00FF00</color>
+    <color name="lavender">#8692f7</color>
+    <color name="light_blue_600">#FF039BE5</color>
+    <color name="light_blue_900">#FF01579B</color>
+    <color name="light_blue_A200">#FF40C4FF</color>
+    <color name="light_blue_A400">#FF00B0FF</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="red">#FFFF0000</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="teal_blue">#FF54FFFD</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="app_name">Splash Browser</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="navigation_drawer_close">Tutup Navigasi</string>
+    <string name="navigation_drawer_open">Buka Navigasi</string>
+    <string name="search_or_type_url">Search or Type URL</string>
+    <style name="Base.Theme.SplashBrowser" parent="Theme.Material3.DayNight.NoActionBar">
+        
+        
+        <item name="colorPrimary">@color/purple_200</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/black</item>
+        
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorOnSecondary">@color/black</item>
+
+        
+        <item name="android:statusBarColor">@android:color/transparent</item>
+
+        
+        <item name="fontFamily">@font/alv</item>
+
+    </style>
+    <style name="DialogAnimation">
+
+        <item name="android:windowEnterAnimation">@anim/slide_in</item>
+        <item name="android:windowExitAnimation">@anim/slide_out</item>
+
+    </style>
+    <style name="Theme.SplashBrowser" parent="Base.Theme.SplashBrowser"/>
+    <declare-styleable name="SlidingUpPanelLayout">
+        <attr format="dimension" name="umanoPanelHeight"/>
+        <attr format="dimension" name="umanoShadowHeight"/>
+        <attr format="dimension" name="umanoParallaxOffset"/>
+        <attr format="color" name="umanoFadeColor"/>
+        <attr format="integer" name="umanoFlingVelocity"/>
+        <attr format="reference" name="umanoDragView"/>
+        <attr format="reference" name="umanoScrollableView"/>
+        <attr format="boolean" name="umanoOverlay"/>
+        <attr format="boolean" name="umanoClipPanel"/>
+        <attr format="float" name="umanoAnchorPoint"/>
+        <attr format="enum" name="umanoInitialState">
+            <enum name="expanded" value="0"/>
+            <enum name="collapsed" value="1"/>
+            <enum name="anchored" value="2"/>
+            <enum name="hidden" value="3"/>
+        </attr>
+        <attr format="reference" name="umanoScrollInterpolator"/>
+    </declare-styleable>
+</resources>

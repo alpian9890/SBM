@@ -1,0 +1,374 @@
+[
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/menu_nav_menu.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/menu/nav_menu.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_cursor_red_24.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/cursor_red_24.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_white_yellow.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/white_yellow.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_info_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_info_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_settings_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_settings_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_surveypanel.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_surveypanel.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_sharp_chevron_left_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/sharp_chevron_left_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_cast_connected_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_cast_connected_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_lk21.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_lk21.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_cursor_main.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_cursor_main.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_vidio_com.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_vidio_com.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_edittext.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/edittext.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_activity_main.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/activity_main.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_nav_header.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/nav_header.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_share_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_share_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_history_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_history_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_chatgpt.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_chatgpt.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_google.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_google.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_auto_awesome_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_auto_awesome_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_pause.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_pause.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_home.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_home.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_twotone_dangerous_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/twotone_dangerous_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-xhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_add_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_add_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_above_shadow.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/above_shadow.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/anim_slide_in.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/anim/slide_in.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_progress_loadurl.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/progress_loadurl.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_bg_corner_darkgrey.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/bg_corner_darkgrey.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_cursor_play_yellow.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_cursor_play_yellow.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_item_add_button.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/item_add_button.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_round_download_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/round_download_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_fragment_browser_tab.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/fragment_browser_tab.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_below_shadow.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/below_shadow.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_bottom_sheet_add_item.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/bottom_sheet_add_item.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_alv_default_page.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_alv_default_page.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_music.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_music.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_bg_black_overlay_10rect.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/bg_black_overlay_10rect.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_whatsapp_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_whatsapp_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_bottom_sheet_edit_item.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/bottom_sheet_edit_item.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_cursor_close_red.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_cursor_close_red.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_workercash.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_workercash.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-xxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_close.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_close.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_dua_tab.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_dua_tab.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_toolbar_layout.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/toolbar_layout.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_clear_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_clear_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/font_alv.ttf.flat",
+        "source": "alv.splash.browser.app-main-38:/font/alv.ttf"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable-anydpi-v24_ic_launcher_foreground.xml.flat",
+        "source": "alv.splash.browser.app-pngs-32:/drawable-anydpi-v24/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_search_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_search_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_suno.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_suno.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_fragment_home.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/fragment_home.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_refresh_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_refresh_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-xxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_launcher_background.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-mdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-xhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_lock.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_lock.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_item_speed_dial.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/item_speed_dial.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_home_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_home_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_black_lavender.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/black_lavender.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/xml_backup_rules.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_sharp_chevron_right_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/sharp_chevron_right_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-hdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_tab_two.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_tab_two.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_splash_bg_header.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/splash_bg_header.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-hdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_computer_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_computer_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-xxxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_pointer_24dp.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/pointer_24dp.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_outline_bookmark_add_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/outline_bookmark_add_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_round_remove_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/round_remove_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_activity_start_working.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/activity_start_working.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_cursor_red_25.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/cursor_red_25.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_splash_logo.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/splash_logo.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_play.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_play.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_menu_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_menu_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_baseline_exit_to_app_24.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/baseline_exit_to_app_24.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_sw_bottomsheet_control.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/sw_bottomsheet_control.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/anim_slide_out.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/anim/slide_out.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_more.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_more.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "alv.splash.browser.app-main-38:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/xml_data_extraction_rules.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/layout_description_shortcut_sw_bottomsheet.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/layout/description_shortcut_sw_bottomsheet.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_incognito.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_incognito.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_toggle_play_pause.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/toggle_play_pause.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_money_icon.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/money_icon.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_page_icon.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_page_icon.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_colab.png.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_colab.png"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_tab_one.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_tab_one.xml"
+    },
+    {
+        "merged": "alv.splash.browser.app-debug-36:/drawable_ic_add.xml.flat",
+        "source": "alv.splash.browser.app-main-38:/drawable/ic_add.xml"
+    }
+]
