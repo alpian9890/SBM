@@ -29,6 +29,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.MotionEvent;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
@@ -41,6 +42,7 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
@@ -133,6 +135,42 @@ public class StartWorking extends AppCompatActivity {
 
     private boolean toggleClick = true;
 
+    String scriptInjectData =
+            "(function() {" +
+                    "   function observeElementsByClass(className, callback) {" +
+                    "       var targets = document.querySelectorAll('.' + className);" +
+                    "       if (!targets || targets.length === 0) return;" +
+                    "       targets.forEach(function(target) {" +
+                    "           var observer = new MutationObserver(function(mutations) {" +
+                    "               mutations.forEach(function(mutation) {" +
+                    "                   callback(mutation, target);" +
+                    "               });" +
+                    "           });" +
+                    "           observer.observe(target, { attributes: true, childList: true, subtree: true });" +
+                    "       });" +
+                    "   }" +
+
+                    // Observer for captcha-image class
+                    "   observeElementsByClass('captcha-image', function(mutation, target) {" +
+                    "       var backgroundImage = target.style.backgroundImage;" +
+                    "       if (backgroundImage) {" +
+                    "           var base64Data = backgroundImage.match(/base64,(.*)\\\"\\)/)[1];" + // Ekstrak base64
+                    "           window.android.getImgBase64(base64Data);" +
+                    "       }" +
+                    "   });" +
+
+                    // Observer for inp-dft class
+                    "   observeElementsByClass('inp-dft', function(mutation, target) {" +
+                    "       if (mutation.type === 'attributes' && mutation.attributeName === 'value') {" +
+                    "           var inputValue = target.value;" +
+                    "           window.android.inputLabel(inputValue);" +
+                    "       } else if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {" +
+                    "           var inputValue = target.value;" +
+                    "           window.android.inputLabel(inputValue);" +
+                    "       }" +
+                    "   });" +
+                    "})();";
+
     String inject4Datasets = "const targetNode = document.querySelector('body');"
             + "const config = { attributes: true, childList: true, subtree: true };"
             + "const callback = function(mutationsList, observer) {"
@@ -188,6 +226,7 @@ public class StartWorking extends AppCompatActivity {
     private String imagesPath = basePath + "/Images";
     private String csvPath = basePath + "/labels.csv";
 
+    WebAppInterface webAppInterface;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -204,10 +243,66 @@ public class StartWorking extends AppCompatActivity {
         webViewTab1 = findViewById(R.id.webViewTab1);
         new AdBlockerWebView.init(this).initializeWebView(webViewTab1);
 
+        webAppInterface = new WebAppInterface(this);
 
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
+		
+		FloatingActionButton fabInject = findViewById(R.id.fabInject);
+		fabInject.setOnClickListener(v -> {
+			webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, null);
+			Log.i("Inject_WebView", "Start Injected script");
+		});
+        FloatingActionButton fabSave = findViewById(R.id.fabSave);
+        fabSave.setOnClickListener(v -> {
+            //Toast.makeText(this, "Saving...", Toast.LENGTH_SHORT).show();
+            new Thread(() -> {
+
+                try {
+                    if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)){
+                        Log.i("Inject_WebView", "fabSave: Title Earning Detected");
+                        if (webAppInterface.getImgBase64 != null) {
+                            Log.i("Inject_WebView", "fabSave: ImgBase64 Found");
+							if (webAppInterface.inputLabel != null) {
+								ImgData_LABEL = webAppInterface.inputLabel;
+                                Log.i("Inject_WebView", "fabSave: InputLabel Found: " + webAppInterface.inputLabel);
+							} else {
+								ImgData_LABEL = "null: " + webAppInterface.inputLabel;
+                                Log.i("Inject_WebView", "fabSave: InputLabel Null/Empty: " + ImgData_LABEL);
+							}
+                            copyToClipboard(webAppInterface.getImgBase64 + "\n\n\n\n" + ImgData_LABEL);
+                            Log.i("Inject_WebView", "fabSave: ImgBase64 Copied to Clipboard");
+                            copyToClipboard("getImgBase64[2]: "+webAppInterface.getImgBase642);
+                            Thread.sleep(300);
+							runOnUiThread(() -> {
+								super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+							});
+                            /*
+                            saveBase64Image(ImgData_BASE64, image_captcha_name);
+                            saveToCsv("Images/"+image_captcha_name, ImgData_LABEL);
+                            Thread.sleep(300);
+                            super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                            Thread.sleep(150);
+                            performAutoClick(); */
+                        } else {
+                            /*super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                            Thread.sleep(190);
+                            performAutoClick();*/
+                        }
+                    } else
+                    if (getUrl2.contains("kolotibablo.com") && pageTitle2.contains(title_earning)){
+                        /*
+                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                        Thread.sleep(200);
+                        performAutoClick();*/
+
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        });
 
         pBarTab1 = findViewById(R.id.pBarTab1);
         pBarTab2 = findViewById(R.id.pBarTab2);
@@ -774,7 +869,7 @@ public class StartWorking extends AppCompatActivity {
 
     private void copyToClipboard(String text) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("hasil_kalkulator", text);
+        ClipData clip = ClipData.newPlainText("copied", text);
         clipboard.setPrimaryClip(clip);
     }
 
@@ -1162,9 +1257,12 @@ public class StartWorking extends AppCompatActivity {
                 super.onPageFinished(view, url);
 
                 if (url.contains("kolotibablo.com")) {
-                    if (pageTitle1.equals(title_earning)) {
-                        view.evaluateJavascript(inject4Datasets, null);
-                    }
+//                    if (pageTitle1.equals(title_earning)) {
+//                        view.evaluateJavascript(inject4Datasets, null);
+//                    } else {
+//                        view.evaluateJavascript(inject4Datasets, null);
+//                    }
+                    view.evaluateJavascript(webAppInterface.scriptInjectData, null);
                 }
 
             }
@@ -1200,19 +1298,11 @@ public class StartWorking extends AppCompatActivity {
             }
         });
 
-        webViewTab1.addJavascriptInterface(new MyJavaScriptInterface(), "Android");
+        webViewTab1.addJavascriptInterface(webAppInterface, "android");
 
     }
 
-    class MyJavaScriptInterface {
-        @JavascriptInterface
-        public void onDataDetected(String imageData, String label) {
-            if (!imageData.isEmpty() && !label.isEmpty()) {
-                ImgData_BASE64 = imageData;
-                ImgData_LABEL = label;
-            }
-        }
-    }
+
 
     private void setupWebViewSettings() {
         WebSettings webSettings = webViewTab1.getSettings();
@@ -1306,8 +1396,37 @@ public class StartWorking extends AppCompatActivity {
                     titleTab1.setSelected(false);
                 }
             }
+
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                // Dapatkan pesan dari console.log
+                String message = consoleMessage.message();
+
+                // Tambahkan pesan ke TextView
+                updateConsoleLog(message);
+
+                return super.onConsoleMessage(consoleMessage);
+            }
+
         });
     }
+
+    private void updateConsoleLog(final String message) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // Tambahkan log baru ke TextView
+                TextView consoleLog = findViewById(R.id.consoleLogText);
+                 String currentText = consoleLog.getText().toString();
+                 consoleLog.setText(currentText + "\n" + message);
+
+                // Scroll otomatis ke bawah agar log terbaru terlihat
+                ScrollView scrollView = findViewById(R.id.consoleLogScroll);
+                scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+            }
+        });
+    }
+
     private TextWatcher titleTextWatcher = new TextWatcher() {
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {}

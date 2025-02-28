@@ -17,8 +17,7 @@ android {
         minSdk 21
         targetSdk 35
         versionCode 8
-        versionName "Edelweiss 8.6"
-
+        versionName "Edelweiss 8.9.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }

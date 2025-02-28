@@ -123,6 +123,30 @@
                 android:focusable="true"
                 android:focusableInTouchMode="true"/>
 
+            <ScrollView
+                android:id="@+id/consoleLogScroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#000000">
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <TextView
+                        android:id="@+id/consoleLogText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:padding="8dp"
+                        android:text="   Console Log   "
+                        android:textColor="#FFFF00"
+                        android:textSize="12sp"/>
+
+                </HorizontalScrollView>
+
+            </ScrollView>
+
         </RelativeLayout>
 
     </LinearLayout>
@@ -137,5 +161,28 @@
         android:src="@drawable/baseline_settings_24"
         android:contentDescription="Control"
         android:backgroundTint="@color/lavender" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fabSave"
+        android:layout_centerInParent="true"
+        android:contentDescription="Save"
+        android:src="@drawable/baseline_save_24"
+        android:backgroundTint="@color/black_overlay"
+        android:layout_above="@+id/fab_control"/>
+		
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fabInject"
+        android:layout_centerInParent="true"
+        android:layout_margin="16dp"
+        android:contentDescription="Inject"
+        android:src="@drawable/ic_colab"
+        android:backgroundTint="@color/light_blue_600"
+        android:layout_above="@+id/fabSave"/>
+
+
 
 </RelativeLayout>
