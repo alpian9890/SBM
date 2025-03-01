@@ -248,58 +248,86 @@ public class StartWorking extends AppCompatActivity {
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
+
+        TextView copyLog = findViewById(R.id.copyLog);
+        copyLog.setOnClickListener(v -> {
+            TextView consoleLogText = findViewById(R.id.consoleLogText);
+            if (consoleLogText != null && consoleLogText.getText() != null) {
+                String text = consoleLogText.getText().toString();
+                if (!text.isEmpty()) {
+                    copyToClipboard(text);
+                }
+            }
+        });
 		
-		FloatingActionButton fabInject = findViewById(R.id.fabInject);
+		TextView clearLog = findViewById(R.id.clearLog);
+		clearLog.setOnClickListener(v -> {
+			TextView consoleLog = findViewById(R.id.consoleLogText);
+            consoleLog.setText("");
+		});
+
+
+        FloatingActionButton fabInject = findViewById(R.id.fabInject);
 		fabInject.setOnClickListener(v -> {
-			webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, null);
+			updateConsoleLog("\n Inject_Debug: " + webAppInterface.scriptInjectData.length());
+            updateConsoleLog("\n String kode JS: " + webAppInterface.scriptInjectData);
+            webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, new ValueCallback<String>() {
+                @Override
+                public void onReceiveValue(String value) {
+                    updateConsoleLog("\n onReceiveValue: " + value);
+					Log.d("Inject_Debug", "String webAppInterface.scriptInjectData: " + webAppInterface.scriptInjectData);
+                }
+            });
 			Log.i("Inject_WebView", "Start Injected script");
 		});
         FloatingActionButton fabSave = findViewById(R.id.fabSave);
         fabSave.setOnClickListener(v -> {
-            //Toast.makeText(this, "Saving...", Toast.LENGTH_SHORT).show();
             new Thread(() -> {
-
                 try {
-                    if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)){
-                        Log.i("Inject_WebView", "fabSave: Title Earning Detected");
-                        if (webAppInterface.getImgBase64 != null) {
-                            Log.i("Inject_WebView", "fabSave: ImgBase64 Found");
-							if (webAppInterface.inputLabel != null) {
-								ImgData_LABEL = webAppInterface.inputLabel;
-                                Log.i("Inject_WebView", "fabSave: InputLabel Found: " + webAppInterface.inputLabel);
-							} else {
-								ImgData_LABEL = "null: " + webAppInterface.inputLabel;
-                                Log.i("Inject_WebView", "fabSave: InputLabel Null/Empty: " + ImgData_LABEL);
-							}
-                            copyToClipboard(webAppInterface.getImgBase64 + "\n\n\n\n" + ImgData_LABEL);
-                            Log.i("Inject_WebView", "fabSave: ImgBase64 Copied to Clipboard");
-                            copyToClipboard("getImgBase64[2]: "+webAppInterface.getImgBase642);
-                            Thread.sleep(300);
-							runOnUiThread(() -> {
-								super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-							});
-                            /*
-                            saveBase64Image(ImgData_BASE64, image_captcha_name);
-                            saveToCsv("Images/"+image_captcha_name, ImgData_LABEL);
-                            Thread.sleep(300);
-                            super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                            Thread.sleep(150);
-                            performAutoClick(); */
-                        } else {
-                            /*super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                            Thread.sleep(190);
-                            performAutoClick();*/
-                        }
-                    } else
-                    if (getUrl2.contains("kolotibablo.com") && pageTitle2.contains(title_earning)){
-                        /*
-                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                        Thread.sleep(200);
-                        performAutoClick();*/
+                    if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)) {
+                        Log.i("Saving Data", "Title Earning Detected");
 
+                        // Validasi data lebih ketat
+                        if (webAppInterface.ImgBase64 != null && !webAppInterface.ImgBase64.isEmpty()) {
+                            Log.i("Saving Data", "Data length: " + webAppInterface.ImgBase64.length());
+
+                            try {
+                                String[] parts = webAppInterface.ImgBase64.split(",", 2);
+                                if (parts.length < 2) {
+                                    throw new IllegalArgumentException("Invalid base64 format");
+                                }
+
+                                String mimeType = parts[0].split(";")[0];
+                                String extension = mimeType.split("/")[1];
+                                String base64Data = parts[1];
+
+                                Log.d("ImageInfo", "MIME Type: " + mimeType);
+                                Log.d("ImageInfo", "Extension: " + extension);
+                                Log.d("ImageInfo", "Data length: " + base64Data.length());
+
+                                copyToClipboard(webAppInterface.ImgBase64 + "\n\n\n\n" + webAppInterface.ImgLabel);
+
+                                runOnUiThread(() -> {
+                                    Toast.makeText(this, "Saved: " + extension.toUpperCase() + " image", Toast.LENGTH_SHORT).show();
+                                });
+
+                            } catch (Exception e) {
+                                Log.e("Saving Data", "Error processing image: " + e.getMessage());
+                                runOnUiThread(() -> {
+                                    Toast.makeText(this, "Error: Invalid image format", Toast.LENGTH_SHORT).show();
+                                });
+                            }
+                        } else {
+                            Log.w("Saving Data", "No image data available");
+                            runOnUiThread(() -> {
+                                Toast.makeText(this, "No data to save", Toast.LENGTH_SHORT).show();
+                            });
+                        }
                     }
+                    Thread.sleep(300);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Log.e("Saving Data", "Thread interrupted", e);
+                    Thread.currentThread().interrupt();
                 }
             }).start();
         });
@@ -1262,7 +1290,12 @@ public class StartWorking extends AppCompatActivity {
 //                    } else {
 //                        view.evaluateJavascript(inject4Datasets, null);
 //                    }
-                    view.evaluateJavascript(webAppInterface.scriptInjectData, null);
+                    view.evaluateJavascript(webAppInterface.scriptInjectData, new ValueCallback<String>() {
+    @Override
+    public void onReceiveValue(String value) {
+        Log.d("JS_EVAL", "Result: " + value);
+    }
+});
                 }
 
             }
@@ -1298,7 +1331,7 @@ public class StartWorking extends AppCompatActivity {
             }
         });
 
-        webViewTab1.addJavascriptInterface(webAppInterface, "android");
+        webViewTab1.addJavascriptInterface(webAppInterface, "AndroidInterface");
 
     }
 

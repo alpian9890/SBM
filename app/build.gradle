@@ -16,8 +16,8 @@ android {
         applicationId "alv.splash.browser"
         minSdk 21
         targetSdk 35
-        versionCode 8
-        versionName "Edelweiss 8.9.6"
+        versionCode 9
+        versionName "Edelweiss 9.3.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }

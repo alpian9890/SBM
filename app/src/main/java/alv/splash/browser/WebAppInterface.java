@@ -3,116 +3,142 @@ package alv.splash.browser;
 import android.content.Context;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
 
 public class WebAppInterface {
+
     private Context mContext;
 
     public WebAppInterface(Context context) {
+        Log.i("WebAppInterface", "WebAppInterface Initialized");
         mContext = context;
     }
-
-    public String scriptInjectData =
-            "(function() {" +
-                    "function observeElementsByClass(className, callback) {" +
-                    "var targets = document.querySelectorAll('.' + className);" +
-                    "if (!targets || targets.length === 0) {" +
-                    "window.android.elementNotFound(className);" +
-                    "return;" +
-                    "}" +
-                    "window.android.elementFound(className);" +
-
-                    "var backgroundImage = document.querySelector('.captcha-image').style.backgroundImage;" +
-                    "if (backgroundImage) {" +
-                    "var base64Match2 = backgroundImage.match(/base64,(.*)\"$ /);" +
-                    "if (base64Match2) {" +
-                    "window.android.getImgBase642(base64Match2[1]);" +
-                    "} else {" +
-                    "window.android.mutationFailure('.captcha-image', 'No base64 found');" +
-                    "}" +
-
-                    "targets.forEach(function(target) {" +
-                    "var observer = new MutationObserver(function(mutations) {" +
-                    "mutations.forEach(function(mutation) {" +
-                    "callback(mutation, target);" +
-                    "});" +
-                    "});" +
-                    "observer.observe(target, { attributes: true, childList: true, subtree: true });" +
-                    "});" +
-                    "}" +
-
-                    // Observer for captcha-image
-                    "observeElementsByClass('captcha-image', function(mutation, target) {" +
-                    "var backgroundImage = target.style.backgroundImage;" +
-                    "if (backgroundImage) {" +
-                    "var base64Match = backgroundImage.match(/base64,(.*)\"$ /);" +
-                    "if (base64Match) {" +
-                    "window.android.getImgBase64(base64Match[1]);" +
-                    "} else {" +
-                    "window.android.mutationFailure('captcha-image', 'No base64 found');" +
-                    "}" +
-                    "} else {" +
-                    "window.android.mutationFailure('captcha-image', 'No background image');" +
-                    "}" +
-                    "});" +
-
-                    // Observer for inp-dft
-                    "observeElementsByClass('inp-dft', function(mutation, target) {" +
-                    "if (mutation.type === 'attributes' && mutation.attributeName === 'value') {" +
-                    "window.android.inputLabel(target.value);" +
-                    "} else if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {" +
-                    "window.android.inputLabel(target.value);" +
-                    "}" +
-                    "});" +
-                    "})();";
-
-    public String elementFound = null;
-    public String elementNotFound = null;
-    public String getImgBase64 = null;
-    public String getImgBase642 = null;
-    public String inputLabel = null;
-    public String mutationFailure = null;
-
+	
+	public String scriptInjectData = "(function() {" +
+    "function startObserving() {" +
+    "    const targetNode = document.querySelector('.work-area-wrap');" +
+    "    if (!targetNode) {" +
+    "        AndroidInterface.mutationFailure('work-area-wrap', 'Target node not found');" +
+    "        return;" +
+    "    }" +
+    "    console.log('MutationObserver initialized');" +
+    "    AndroidInterface.elementFound('work-area-wrap');" +
+    "    const config = { " +
+    "        childList: true," +
+    "        subtree: true," +
+    "        attributes: true," +
+    "        attributeFilter: ['style']" +
+    "    };" +
+    "    const callback = function(mutationsList) {" +
+    "        console.log('Mutation detected:', mutationsList.length + ' changes');" +
+    "        try {" +
+    "            checkAndCaptureElements();" +
+    "        } catch (e) {" +
+    "            AndroidInterface.mutationFailure('observer-callback', e.message);" +
+    "        }" +
+    "    };" +
+    "    const observer = new MutationObserver(callback);" +
+    "    observer.observe(targetNode, config);" +
+    "    checkAndCaptureElements();" +
+    "}" +
+    "function checkAndCaptureElements() {" +
+    "    const captcha = document.querySelector('.captcha-image');" +
+    "    const input = document.querySelector('.inp-dft');" +
+    "    if (captcha) {" +
+    "        AndroidInterface.elementFound('captcha-image');" +
+    "        console.log('Captcha element found');" +
+    "        try {" +
+    "            const bgImage = window.getComputedStyle(captcha).backgroundImage;" +
+    "            if (bgImage) {" +
+    "                let fullDataUrl = bgImage;" +
+    "                if (bgImage.includes('url(')) {" +
+    "                    fullDataUrl = bgImage.replace(/^url\\(['\"]?/, '').replace(/['\"]?\\)$/, '');" +
+    "                }" +
+    "                console.log('Captcha data URL captured');" +
+    "                AndroidInterface.onCaptchaCaptured(fullDataUrl);" +
+    "                new MutationObserver(function(mutations) {" +
+    "                    const newBg = window.getComputedStyle(captcha).backgroundImage;" +
+    "                    if (newBg !== bgImage) {" +
+    "                        console.log('Captcha image changed');" +
+    "                        let newUrl = newBg;" +
+    "                        if (newBg.includes('url(')) {" +
+    "                            newUrl = newBg.replace(/^url\\(['\"]?/, '').replace(/['\"]?\\)$/, '');" +
+    "                        }" +
+    "                        AndroidInterface.onCaptchaCaptured(newUrl);" +
+    "                    }" +
+    "                }).observe(captcha, { attributes: true, attributeFilter: ['style'] });" +
+    "            } else {" +
+    "                AndroidInterface.mutationFailure('captcha-image', 'Invalid background format');" +
+    "            }" +
+    "        } catch (e) {" +
+    "            AndroidInterface.mutationFailure('captcha-image', e.message);" +
+    "        }" +
+    "    } else {" +
+    "        AndroidInterface.elementNotFound('captcha-image');" +
+    "    }" +
+    "    if (input) {" +
+    "        AndroidInterface.elementFound('inp-dft');" +
+    "        console.log('Input element found');" +
+    "        try {" +
+    "            AndroidInterface.onInputCaptured(input.value);" +
+    "            input.addEventListener('input', function(e) {" +
+    "                console.log('Input value changed:', e.target.value);" +
+    "                AndroidInterface.onInputCaptured(e.target.value);" +
+    "            });" +
+    "        } catch (e) {" +
+    "            AndroidInterface.mutationFailure('inp-dft', e.message);" +
+    "        }" +
+    "    } else {" +
+    "        AndroidInterface.elementNotFound('inp-dft');" +
+    "    }" +
+    "}" +
+    "if (document.readyState === 'loading') {" +
+    "    document.addEventListener('DOMContentLoaded', function() {" +
+    "        console.log('DOM fully loaded');" +
+    "        startObserving();" +
+    "    });" +
+    "} else {" +
+    "    startObserving();" +
+    "}" +
+    "})();";
+    
+    public String elementFound = "";
+    public String elementNotFound = "";
+    public String ImgBase64 = "";
+    public String ImgLabel = "";
+    public String mutationFailure = "";
+    
     @JavascriptInterface
     public void elementFound(String className) {
-        // Handle success: Element with 'className' found
-        Log.i("WebView", "Element found: " + className);
-        elementFound = "Element found: " + className;
+        String msg = "Element found: " + className;
+        Log.i("WebAppInterface", msg);
+        elementFound = msg;
     }
 
     @JavascriptInterface
     public void elementNotFound(String className) {
-        // Handle failure: Element not found
-        Log.e("WebView", "Element not found: " + className);
-        elementNotFound = "Element not found: " + className;
+        String msg = "Element not found: " + className;
+        Log.w("WebAppInterface", msg);
+        elementNotFound = msg;
     }
 
     @JavascriptInterface
-    public void getImgBase64(String base64) {
-        // Handle base64 image data
-        Log.i("WebView", "Image base64 received: " + base64);
-        getImgBase64 = base64;
+    public void onCaptchaCaptured(String base64) {
+        String logMsg = "Captcha data received (" + base64.length() + " chars)";
+        Log.d("WebAppInterface", logMsg);
+        ImgBase64 = base64;
     }
 
     @JavascriptInterface
-    public void getImgBase642(String base64) {
-        // Handle base64 image data
-        Log.i("WebView", "Image base64 [2] received: " + base64);
-        getImgBase642 = base64;
-    }
-
-    @JavascriptInterface
-    public void inputLabel(String value) {
-        // Handle input value
-        Log.i("WebView", "Input value received: " + value);
-        inputLabel = value;
+    public void onInputCaptured(String label) {
+        String logMsg = "Input received: " + (label.isEmpty() ? "<empty>" : label);
+        Log.d("WebAppInterface", logMsg);
+        ImgLabel = label;
     }
 
     @JavascriptInterface
     public void mutationFailure(String className, String reason) {
-        // Handle mutation observer failure
-        Log.e("WebView", "Mutation failure in " + className + ": " + reason);
-        mutationFailure = className + ": " + reason;
+        String msg = "Mutation error in " + className + ": " + reason;
+        Log.e("WebAppInterface", msg);
+        mutationFailure = msg;
     }
 }
-

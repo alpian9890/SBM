@@ -123,29 +123,70 @@
                 android:focusable="true"
                 android:focusableInTouchMode="true"/>
 
-            <ScrollView
-                android:id="@+id/consoleLogScroll"
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#000000">
+                android:layout_height="match_parent">
 
-                <HorizontalScrollView
+                <ScrollView
+                    android:id="@+id/consoleLogScroll"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                    android:layout_height="match_parent"
+                    android:background="#000000">
 
-                    <TextView
-                        android:id="@+id/consoleLogText"
+                    <HorizontalScrollView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="monospace"
-                        android:padding="8dp"
-                        android:text="   Console Log   "
-                        android:textColor="#FFFF00"
-                        android:textSize="12sp"/>
+                        android:layout_height="match_parent">
 
-                </HorizontalScrollView>
+                        <TextView
+                            android:id="@+id/consoleLogText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:padding="8dp"
+                            android:text="   Console Log   "
+                            android:textColor="#FFFF00"
+                            android:textSize="12sp"/>
 
-            </ScrollView>
+                    </HorizontalScrollView>
+
+                </ScrollView>
+				
+				<LinearLayout
+  				    android:layout_marginTop="5dp"
+				    android:layout_alignParentTop="true"
+                    android:layout_centerInParent="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+					android:orientation="horizontal">
+					
+					<TextView
+				    android:layout_margin="8dp"
+                    android:id="@+id/copyLog"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:padding="8dp"
+                    android:background="@drawable/black_lavender"
+                    android:text=" Copy "
+                    android:textColor="@color/light_blue_A400"
+                    android:textSize="12sp"/>
+					
+					<TextView
+				    android:layout_margin="8dp"
+                    android:id="@+id/clearLog"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:padding="8dp"
+                    android:background="@drawable/black_lavender"
+                    android:text=" Clear "
+                    android:textColor="@color/red"
+                    android:textSize="12sp"/>
+					
+					</LinearLayout>
+
+
+            </RelativeLayout>
 
         </RelativeLayout>
 
