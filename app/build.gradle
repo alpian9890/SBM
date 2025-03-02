@@ -17,7 +17,7 @@ android {
         minSdk 21
         targetSdk 35
         versionCode 9
-        versionName "Edelweiss 9.3.2"
+        versionName "Edelweiss 9.3.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -69,8 +69,9 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
-
-
+	
+	implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+	
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'net.objecthunter:exp4j:0.4.8'
     implementation "org.mozilla.geckoview:${geckoviewChannel}:${geckoviewVersion}"

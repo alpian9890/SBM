@@ -168,15 +168,33 @@
                 android:imeOptions="actionDone"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <Button
-            android:layout_marginStart="4dp"
+        <LinearLayout
             android:layout_weight="1"
-            android:id="@+id/btnSaveTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:backgroundTint="#F42B7B"
-            android:textColor="@color/black"
-            android:text="Save"/>
+            android:orientation="horizontal">
+
+            <Switch
+                android:paddingLeft="5dp"
+                android:id="@+id/switchBtnConsole"
+                android:layout_weight="1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="Console"
+                android:textColor="@drawable/switch_text_color"
+                android:thumbTint="@drawable/switch_thumb_color"
+                android:background="@drawable/bg_black_overlay_16rect"/>
+
+            <Button
+                android:layout_marginStart="4dp"
+                android:id="@+id/btnSaveTitle"
+                android:layout_weight="2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:backgroundTint="#F42B7B"
+                android:textColor="@color/black"
+                android:text="Save"/>
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -250,7 +268,7 @@
                 android:id="@+id/speedTestWPM"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="WPM"
+                android:text="0.0"
                 android:fontFamily="monospace"/>
 
         </LinearLayout>

@@ -12,8 +12,18 @@ public class WebAppInterface {
         Log.i("WebAppInterface", "WebAppInterface Initialized");
         mContext = context;
     }
-	
-	public String scriptInjectData = "(function() {" +
+
+    public String removeSpacesStringBuilder(String input) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < input.length(); i++) {
+            if (!Character.isWhitespace(input.charAt(i))) {
+                result.append(input.charAt(i));
+            }
+        }
+        return result.toString();
+    }
+
+    public String scriptInjectData = "(function() {" +
     "function startObserving() {" +
     "    const targetNode = document.querySelector('.work-area-wrap');" +
     "    if (!targetNode) {" +

@@ -42,7 +42,9 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
@@ -64,6 +66,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONObject;
 import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.GeckoView;
@@ -76,6 +79,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class StartWorking extends AppCompatActivity {
 
@@ -135,80 +147,6 @@ public class StartWorking extends AppCompatActivity {
 
     private boolean toggleClick = true;
 
-    String scriptInjectData =
-            "(function() {" +
-                    "   function observeElementsByClass(className, callback) {" +
-                    "       var targets = document.querySelectorAll('.' + className);" +
-                    "       if (!targets || targets.length === 0) return;" +
-                    "       targets.forEach(function(target) {" +
-                    "           var observer = new MutationObserver(function(mutations) {" +
-                    "               mutations.forEach(function(mutation) {" +
-                    "                   callback(mutation, target);" +
-                    "               });" +
-                    "           });" +
-                    "           observer.observe(target, { attributes: true, childList: true, subtree: true });" +
-                    "       });" +
-                    "   }" +
-
-                    // Observer for captcha-image class
-                    "   observeElementsByClass('captcha-image', function(mutation, target) {" +
-                    "       var backgroundImage = target.style.backgroundImage;" +
-                    "       if (backgroundImage) {" +
-                    "           var base64Data = backgroundImage.match(/base64,(.*)\\\"\\)/)[1];" + // Ekstrak base64
-                    "           window.android.getImgBase64(base64Data);" +
-                    "       }" +
-                    "   });" +
-
-                    // Observer for inp-dft class
-                    "   observeElementsByClass('inp-dft', function(mutation, target) {" +
-                    "       if (mutation.type === 'attributes' && mutation.attributeName === 'value') {" +
-                    "           var inputValue = target.value;" +
-                    "           window.android.inputLabel(inputValue);" +
-                    "       } else if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {" +
-                    "           var inputValue = target.value;" +
-                    "           window.android.inputLabel(inputValue);" +
-                    "       }" +
-                    "   });" +
-                    "})();";
-
-    String inject4Datasets = "const targetNode = document.querySelector('body');"
-            + "const config = { attributes: true, childList: true, subtree: true };"
-            + "const callback = function(mutationsList, observer) {"
-            + "    mutationsList.forEach(mutation -> {"
-            + "        const div = document.querySelector('.captcha-image');"
-            + "        const input = document.querySelector('.inp-dft');"
-            + "        if (div && input) {"
-            + "            const imgData = div.style.backgroundImage.replace('url(\"','').replace('\")','');"
-            + "            Android.onDataDetected(imgData, input.value);"
-            + "        }"
-            + "    });"
-            + "};"
-            + "const observer = new MutationObserver(callback);"
-            + "observer.observe(targetNode, config);";
-
-    String injectInputKB =
-            "var observer = new MutationObserver(function(mutations) {" +
-                    "    mutations.forEach(function(mutation) {" +
-                    "        if (mutation.addedNodes) {" +
-                    "            mutation.addedNodes.forEach(function(node) {" +
-                    "                if (node.nodeType === 1) {" +
-                    "if (node.tagName ==='INPUT') { " +
-                    "                    node.focus();" +
-                    " }"+
-                    "const inputs = node.getElementsByTagName('input');"+
-                    "if (inputs.length === 0 || inputs.length > 0) {"+
-                    "inputs[0].focus();"+
-                    "}"+
-                    "                }" +
-                    "            });" +
-                    "        }" +
-                    "    });" +
-                    "});" +
-                    "observer.observe(document.body, { childList: true, subtree: true });";
-
-    String autoFokusInput =
-            "(function() { document.getElementsByTagName('input')[0].focus(); })();";
-
     // Buat instance UrlValidator
     private UrlValidator urlValidator = new UrlValidator();
     private boolean isCalculationMode = false;
@@ -218,9 +156,22 @@ public class StartWorking extends AppCompatActivity {
     private long startTime;
     private int totalKata = 0;
     private boolean isTesting = false;
+    private boolean consoleEnabled = false;
 
+    Switch switchBtnConsole;
     ToggleButton btnPlayPauseWPM;
     TextView speedTestWPM;
+
+    private final OkHttpClient okClient = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build();
+
+    // URL server
+    private final String SERVER_URL = "http://47.129.145.21:9890/upload";
+    private final String API_KEY = "019553d7-9890-0202-2025-7a24b83c935d"; // Kunci API untuk autentikasi
+
 
     private String basePath = Environment.getExternalStorageDirectory() + "/Datasets";
     private String imagesPath = basePath + "/Images";
@@ -249,6 +200,17 @@ public class StartWorking extends AppCompatActivity {
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
 
+        switchBtnConsole = findViewById(R.id.switchBtnConsole);
+
+        switchBtnConsole.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
+            consoleContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            if (isChecked) {
+                consoleEnabled = true;
+            } else {
+                consoleEnabled = false;
+            }
+        });
         TextView copyLog = findViewById(R.id.copyLog);
         copyLog.setOnClickListener(v -> {
             TextView consoleLogText = findViewById(R.id.consoleLogText);
@@ -269,13 +231,13 @@ public class StartWorking extends AppCompatActivity {
 
         FloatingActionButton fabInject = findViewById(R.id.fabInject);
 		fabInject.setOnClickListener(v -> {
-			updateConsoleLog("\n Inject_Debug: " + webAppInterface.scriptInjectData.length());
-            updateConsoleLog("\n String kode JS: " + webAppInterface.scriptInjectData);
+			updateConsoleLog("Inject_Debug: " + webAppInterface.scriptInjectData.length());
+            updateConsoleLog("String JS: " + webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData));
             webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, new ValueCallback<String>() {
                 @Override
                 public void onReceiveValue(String value) {
-                    updateConsoleLog("\n onReceiveValue: " + value);
-					Log.d("Inject_Debug", "String webAppInterface.scriptInjectData: " + webAppInterface.scriptInjectData);
+                    updateConsoleLog("onReceiveValue: " + value);
+					Log.d("Inject_Debug", "String webAppInterface.scriptInjectData: " + webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData));
                 }
             });
 			Log.i("Inject_WebView", "Start Injected script");
@@ -285,48 +247,36 @@ public class StartWorking extends AppCompatActivity {
             new Thread(() -> {
                 try {
                     if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)) {
-                        Log.i("Saving Data", "Title Earning Detected");
+                        updateConsoleLog("Title Earning Detected");
 
-                        // Validasi data lebih ketat
-                        if (webAppInterface.ImgBase64 != null && !webAppInterface.ImgBase64.isEmpty()) {
-                            Log.i("Saving Data", "Data length: " + webAppInterface.ImgBase64.length());
+                        // Validasi data
+                        if (webAppInterface.ImgBase64 != null && !webAppInterface.ImgBase64.isEmpty() &&
+                                webAppInterface.ImgLabel != null && !webAppInterface.ImgLabel.isEmpty()) {
 
-                            try {
-                                String[] parts = webAppInterface.ImgBase64.split(",", 2);
-                                if (parts.length < 2) {
-                                    throw new IllegalArgumentException("Invalid base64 format");
-                                }
+                            updateConsoleLog("Data ditemukan: Image (" + webAppInterface.ImgBase64.length() + " chars) dan Label: " + webAppInterface.ImgLabel);
 
-                                String mimeType = parts[0].split(";")[0];
-                                String extension = mimeType.split("/")[1];
-                                String base64Data = parts[1];
+                            // Buat JSON untuk dikirim ke server
+                            JSONObject jsonData = new JSONObject();
+                            jsonData.put("image_base64", webAppInterface.ImgBase64);
+                            jsonData.put("image_label", webAppInterface.ImgLabel);
+                            jsonData.put("api_key", API_KEY);
 
-                                Log.d("ImageInfo", "MIME Type: " + mimeType);
-                                Log.d("ImageInfo", "Extension: " + extension);
-                                Log.d("ImageInfo", "Data length: " + base64Data.length());
+                            // Mengirim data ke server
+                            sendDataToServer(jsonData);
 
-                                copyToClipboard(webAppInterface.ImgBase64 + "\n\n\n\n" + webAppInterface.ImgLabel);
-
-                                runOnUiThread(() -> {
-                                    Toast.makeText(this, "Saved: " + extension.toUpperCase() + " image", Toast.LENGTH_SHORT).show();
-                                });
-
-                            } catch (Exception e) {
-                                Log.e("Saving Data", "Error processing image: " + e.getMessage());
-                                runOnUiThread(() -> {
-                                    Toast.makeText(this, "Error: Invalid image format", Toast.LENGTH_SHORT).show();
-                                });
-                            }
                         } else {
-                            Log.w("Saving Data", "No image data available");
+                            updateConsoleLog("Error: Tidak ada data untuk diupload");
                             runOnUiThread(() -> {
                                 Toast.makeText(this, "No data to save", Toast.LENGTH_SHORT).show();
                             });
                         }
                     }
                     Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    Log.e("Saving Data", "Thread interrupted", e);
+                } catch (Exception e) {
+                    updateConsoleLog("Error: " + e.getMessage());
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
                     Thread.currentThread().interrupt();
                 }
             }).start();
@@ -624,6 +574,58 @@ public class StartWorking extends AppCompatActivity {
 
     }// akhir onCreate
 
+    private void sendDataToServer(JSONObject jsonData) {
+        try {
+            // Buat request body
+            MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+            RequestBody body = RequestBody.create(jsonData.toString(), JSON);
+
+            // Buat request
+            Request request = new Request.Builder()
+                    .url(SERVER_URL)
+                    .post(body)
+                    .build();
+
+            updateConsoleLog("Mengirim data ke server...");
+
+            // Kirim request secara asynchronous
+            okClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    updateConsoleLog("Gagal terhubung ke server: " + e.getMessage());
+                    runOnUiThread(() -> {
+                        Toast.makeText(getApplicationContext(), "Server tidak dapat dijangkau", Toast.LENGTH_SHORT).show();
+                    });
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    if (response.isSuccessful()) {
+                        try {
+                            JSONObject jsonResponse = new JSONObject(responseBody);
+                            String message = jsonResponse.getString("message");
+                            String filename = jsonResponse.optString("filename", "");
+
+                            updateConsoleLog("Server: " + message + (filename.isEmpty() ? "" : ", file: " + filename));
+                            runOnUiThread(() -> {
+                                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+                            });
+                        } catch (Exception e) {
+                            updateConsoleLog("Error parsing response: " + e.getMessage());
+                        }
+                    } else {
+                        updateConsoleLog("Server error: " + response.code() + " - " + responseBody);
+                        runOnUiThread(() -> {
+                            Toast.makeText(getApplicationContext(), "Server error: " + response.code(), Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                }
+            });
+        } catch (Exception e) {
+            updateConsoleLog("Error saat mengirim data: " + e.getMessage());
+        }
+    }
 
     private void checkPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -691,7 +693,7 @@ public class StartWorking extends AppCompatActivity {
 
                 double wpm = totalKata / elapsedMinutes;
                 String formattedWPM = String.format(Locale.getDefault(), "%.2f", wpm);
-                speedTestWPM.setText(formattedWPM + " WPM");
+                speedTestWPM.setText(formattedWPM);
 
                 handler.postDelayed(this, 1000); // Update setiap 1 detik
             }
@@ -1450,17 +1452,47 @@ public class StartWorking extends AppCompatActivity {
             public void run() {
                 // Tambahkan log baru ke TextView
                 TextView consoleLog = findViewById(R.id.consoleLogText);
-                 String currentText = consoleLog.getText().toString();
-                 consoleLog.setText(currentText + "\n" + message);
+                String currentText = consoleLog.getText().toString();
 
-                // Scroll otomatis ke bawah agar log terbaru terlihat
-                ScrollView scrollView = findViewById(R.id.consoleLogScroll);
-                scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+                if (consoleEnabled==true) {
+                    consoleLog.setText(currentText + "\n" + message);
+                } else {
+                    consoleLog.setText("...Console log...");
+                }
+
             }
         });
     }
 
-    private TextWatcher titleTextWatcher = new TextWatcher() {
+    private void autoScrollLog () {
+        // Scroll otomatis ke bawah agar log terbaru terlihat
+        ScrollView scrollView = findViewById(R.id.consoleLogScroll);
+        // Tambahkan log baru ke TextView
+        TextView consoleLog = findViewById(R.id.consoleLogText);
+
+        consoleLog.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // Tidak perlu melakukan apa pun di sini
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // Tidak perlu melakukan apa pun di sini
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                scrollView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        scrollView.fullScroll(View.FOCUS_DOWN);
+                    }
+                });
+            }
+        });
+    }
+    private TextWatcher watchTitleEarning = new TextWatcher() {
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
