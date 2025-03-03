@@ -138,43 +138,70 @@
         android:contentDescription="Control"
         android:backgroundTint="@color/lavender" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/fabSave"
-        android:layout_centerInParent="true"
-        android:contentDescription="Save"
-        android:src="@drawable/baseline_save_24"
-        android:backgroundTint="#ef5f00"
-        android:layout_above="@+id/fab_control"/>
-		
-	<com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/fabInject"
-        android:layout_centerInParent="true"
-        android:layout_margin="16dp"
-        android:contentDescription="Inject"
-        android:src="@drawable/ic_colab"
-        android:backgroundTint="@color/light_blue_600"
-        android:layout_above="@+id/fabSave"/>
-
     <RelativeLayout
+        android:visibility="gone"
         android:id="@+id/consoleContainer"
         android:layout_centerInParent="true"
         android:layout_alignParentTop="true"
-        android:layout_marginTop="32dp"
-        android:layout_width="wrap_content"
-        android:layout_height="85dp">
+        android:layout_marginTop="20dp"
+        android:layout_width="318dp"
+        android:layout_height="118dp">
 
         <RelativeLayout
+            android:id="@+id/consoleSubContainer"
+            android:layout_centerInParent="true"
+            android:paddingVertical="8dp"
             android:background="@drawable/bg_black_overlay_16rect"
             android:layout_width="300dp"
-            android:layout_height="65dp">
+            android:layout_height="80dp">
 
             <include layout="@layout/console_log_layout"/>
 
         </RelativeLayout>
+
+        <LinearLayout
+            android:gravity="center"
+            android:layout_centerInParent="true"
+            android:layout_alignParentTop="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_margin="5dp"
+                android:id="@+id/saveData"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:paddingVertical="5.5dp"
+                android:paddingHorizontal="5.5dp"
+                android:background="@drawable/black_lavender"
+                android:text=" Upload "
+                android:textColor="@color/light_blue_A400"
+                android:textSize="11sp"/>
+
+            <Space
+                android:id="@+id/space4TextBtn"
+                android:layout_width="64dp"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:layout_margin="5dp"
+                android:id="@+id/injectScript"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:paddingVertical="4dp"
+                android:paddingHorizontal="7dp"
+                android:background="@drawable/black_lavender"
+                android:text=" Inject "
+                android:textColor="#ffff00"
+                android:textSize="12sp"/>
+
+        </LinearLayout>
+
+
         <LinearLayout
             android:gravity="center_horizontal"
             android:layout_centerInParent="true"
@@ -208,7 +235,44 @@
                 android:textSize="12sp"/>
 
         </LinearLayout>
+
+        <ImageView
+            android:layout_marginTop="12dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:id="@+id/closeConsoleLog"
+            android:background="@drawable/grey_red_50"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/rounded_close_small_yellow_24"/>
+
     </RelativeLayout>
+
+    <LinearLayout
+        android:visibility="gone"
+        android:id="@+id/speedTestContainer"
+        android:layout_centerInParent="true"
+        android:layout_alignParentTop="true"
+        android:gravity="center"
+        android:layout_marginTop="8dp"
+        android:paddingVertical="2dp"
+        android:paddingHorizontal="8dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_black_overlay_10rect"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textColor="@color/yellow"
+            android:text="Speed"/>
+
+        <include layout="@layout/speed_text"/>
+
+    </LinearLayout>
+
 
 
 

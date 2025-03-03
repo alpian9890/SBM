@@ -16,12 +16,14 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -44,6 +46,7 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
+import android.widget.Space;
 import android.widget.Switch;
 import android.widget.ToggleButton;
 
@@ -92,7 +95,8 @@ import okhttp3.Response;
 public class StartWorking extends AppCompatActivity {
 
     private static final int STORAGE_PERMISSION_CODE = 101;
-    String image_captcha_name = UUID.randomUUID().toString() + ".png";
+    private static final int REQUEST_CODE_102 = 102;
+    String image_captcha_name = UUID.randomUUID().toString();
     String ImgData_BASE64 = "";
     String ImgData_LABEL = "";
     String KBEarn = "https://kolotibablo.com";
@@ -139,7 +143,7 @@ public class StartWorking extends AppCompatActivity {
 
     float lastX_right, lastY_right, lastX_left, lastY_left,
           lastX_pauseR, lastY_pauseR, lastX_pauseL, lastY_pauseL,
-          lastX_closeR, lastY_closeR, lastX_closeL, lastY_closeL;;
+          lastX_closeR, lastY_closeR, lastX_closeL, lastY_closeL;
     ImageView pointerRight, pointerLeft,
             pointerPauseR, pointerPauseL,
             pointerCloseR, pointerCloseL;
@@ -157,10 +161,12 @@ public class StartWorking extends AppCompatActivity {
     private int totalKata = 0;
     private boolean isTesting = false;
     private boolean consoleEnabled = false;
+	private boolean isLogCopied = false;
 
     Switch switchBtnConsole;
     ToggleButton btnPlayPauseWPM;
     TextView speedTestWPM;
+    ImageView closeConsoleLog;
 
     private final OkHttpClient okClient = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -173,9 +179,9 @@ public class StartWorking extends AppCompatActivity {
     private final String API_KEY = "019553d7-9890-0202-2025-7a24b83c935d"; // Kunci API untuk autentikasi
 
 
-    private String basePath = Environment.getExternalStorageDirectory() + "/Datasets";
-    private String imagesPath = basePath + "/Images";
-    private String csvPath = basePath + "/labels.csv";
+    private String basePath = "";// Environment.getExternalStorageDirectory() + "/Datasets";
+    private String imagesPath = ""; // basePath + "/Images";
+    private String csvPath = ""; // basePath + "/labels.csv";
 
     WebAppInterface webAppInterface;
 
@@ -199,27 +205,26 @@ public class StartWorking extends AppCompatActivity {
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
-
-        switchBtnConsole = findViewById(R.id.switchBtnConsole);
-
-        switchBtnConsole.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
-            consoleContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            if (isChecked) {
-                consoleEnabled = true;
-            } else {
-                consoleEnabled = false;
-            }
-        });
+		closeConsoleLog = findViewById(R.id.closeConsoleLog);
+		
+        
         TextView copyLog = findViewById(R.id.copyLog);
         copyLog.setOnClickListener(v -> {
             TextView consoleLogText = findViewById(R.id.consoleLogText);
-            if (consoleLogText != null && consoleLogText.getText() != null) {
-                String text = consoleLogText.getText().toString();
-                if (!text.isEmpty()) {
-                    copyToClipboard(text);
-                }
-            }
+            if (!isLogCopied){
+				if (consoleLogText != null && consoleLogText.getText() != null) {
+					String text = consoleLogText.getText().toString();
+					if (!text.isEmpty()) {
+						copyToClipboard(text);
+						isLogCopied = true;
+						copyLog.setText("Copied");
+						new Handler().postDelayed(() -> {
+							copyLog.setText(" Copy ");
+							isLogCopied = false;
+							}, 1000);
+					}
+				}
+			}
         });
 		
 		TextView clearLog = findViewById(R.id.clearLog);
@@ -227,10 +232,11 @@ public class StartWorking extends AppCompatActivity {
 			TextView consoleLog = findViewById(R.id.consoleLogText);
             consoleLog.setText("");
 		});
+		
 
 
-        FloatingActionButton fabInject = findViewById(R.id.fabInject);
-		fabInject.setOnClickListener(v -> {
+        TextView injectScript = findViewById(R.id.injectScript);
+		injectScript.setOnClickListener(v -> {
 			updateConsoleLog("Inject_Debug: " + webAppInterface.scriptInjectData.length());
             updateConsoleLog("String JS: " + webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData));
             webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, new ValueCallback<String>() {
@@ -242,8 +248,8 @@ public class StartWorking extends AppCompatActivity {
             });
 			Log.i("Inject_WebView", "Start Injected script");
 		});
-        FloatingActionButton fabSave = findViewById(R.id.fabSave);
-        fabSave.setOnClickListener(v -> {
+        TextView saveData = findViewById(R.id.saveData);
+        saveData.setOnClickListener(v -> {
             new Thread(() -> {
                 try {
                     if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)) {
@@ -270,7 +276,11 @@ public class StartWorking extends AppCompatActivity {
                                 Toast.makeText(this, "No data to save", Toast.LENGTH_SHORT).show();
                             });
                         }
-                    }
+                    } else {
+						runOnUiThread(() -> {
+                                Toast.makeText(this, "Not available", Toast.LENGTH_SHORT).show();
+                            });
+					}
                     Thread.sleep(300);
                 } catch (Exception e) {
                     updateConsoleLog("Error: " + e.getMessage());
@@ -313,24 +323,52 @@ public class StartWorking extends AppCompatActivity {
         editTextTitleKB.setText(title_earning);
 
         loadTitleKB(title_earning);
-
+        View layoutSpeedText = LayoutInflater.from(this).inflate(R.layout.speed_text, null);
+        speedTestWPM = layoutSpeedText.findViewById(R.id.speedTestWPM);
         btnPlayPauseWPM = bottomSheetDialog.findViewById(R.id.btnPlayPauseWPM);
-        speedTestWPM = bottomSheetDialog.findViewById(R.id.speedTestWPM);
-
+		switchBtnConsole = bottomSheetDialog.findViewById(R.id.switchBtnConsole);
+		
+		closeConsoleLog.setOnClickListener(v -> {
+            RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
+			TextView consoleLog = findViewById(R.id.consoleLogText);
+            consoleLog.setText("");
+			consoleContainer.setVisibility(View.GONE);
+			switchBtnConsole.setChecked(false);
+			consoleEnabled = false;
+		});
+		
         btnPlayPauseWPM.setOnCheckedChangeListener((buttonView, isChecked) -> {
+
+            LinearLayout speedTestContainer = findViewById(R.id.speedTestContainer);
+            Space space4TextBtn = findViewById(R.id.space4TextBtn);
+
             if (isChecked) {
+                speedTestContainer.setVisibility(View.VISIBLE);
+                space4TextBtn.setVisibility(View.VISIBLE);
                 // Mulai test
                 startTime = System.currentTimeMillis();
                 totalKata = 0;
                 isTesting = true;
                 handler.post(updateWPMLoop); // Mulai perhitungan WPM
             } else {
+                speedTestContainer.setVisibility(View.GONE);
+                space4TextBtn.setVisibility(View.GONE);
                 // Hentikan test
                 isTesting = false;
                 handler.removeCallbacks(updateWPMLoop);
             }
         });
-
+		
+		switchBtnConsole.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
+            consoleContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            if (isChecked) {
+                consoleEnabled = true;
+            } else {
+                consoleEnabled = false;
+            }
+        });
+		
         btnSaveTitle.setOnClickListener(v -> {
             title_earning = editTextTitleKB.getText().toString().trim();
             bottomSheetDialog.dismiss();
@@ -566,7 +604,7 @@ public class StartWorking extends AppCompatActivity {
             pointerCloseL.setX(Math.max(0, Math.min(pointerCloseLPos[0], webViewTab1.getWidth() - pointerCloseL.getWidth())));
             pointerCloseL.setY(Math.max(0, Math.min(pointerCloseLPos[1], webViewTab1.getHeight() - pointerCloseL.getHeight())));
 
-            checkPermissions();
+            requestStoragePermissions();
 
         });
 
@@ -627,6 +665,41 @@ public class StartWorking extends AppCompatActivity {
         }
     }
 
+    private void setupStorage() {
+        // Definisi path
+        basePath = Environment.getExternalStorageDirectory() + "/Datasets";
+        imagesPath = basePath + "/Images";
+        csvPath = basePath + "/labels.csv";
+
+        // Minta izin penyimpanan saat aplikasi dibuka
+        setupStorage();
+    }
+
+    private void requestStoragePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ (API 30+)
+            try {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                Uri uri = Uri.fromParts("package", getPackageName(), null);
+                intent.setData(uri);
+                startActivityForResult(intent, REQUEST_CODE_102);
+            } catch (Exception e) {
+                Intent intent = new Intent();
+                intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivityForResult(intent, REQUEST_CODE_102);
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android 6+ (API 23+)
+            if (ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        STORAGE_PERMISSION_CODE);
+            }
+        }
+    }
+    /*
     private void checkPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this,
@@ -637,47 +710,92 @@ public class StartWorking extends AppCompatActivity {
                         STORAGE_PERMISSION_CODE);
             }
         }
-    }
+    }*/
 
-    private void saveBase64Image(String base64Data, String fileName) {
+    private void saveBase64Image(String base64Data, String label) {
         try {
-            //byte[] decodedBytes = Base64.decode(base64Data.split(",")[1], Base64.DEFAULT);
+            // Pisahkan MIME type dan data base64
+            String[] parts = base64Data.split(",");
+            String mimeTypeHeader = parts[0]; // data:image/png;base64
+            String base64EncodedData = parts[1];
+
+            // Ekstrak ekstensi file dari MIME type
+            String extension = "";
+            if (mimeTypeHeader.contains("image/")) {
+                extension = mimeTypeHeader.split("image/")[1].split(";")[0];
+            } else {
+                // Default jika format tidak sesuai
+                throw new IllegalArgumentException("Format base64 tidak valid: " + mimeTypeHeader);
+            }
+
+            // Generate nama file dengan UUID dan ekstensi
+            String fileName = UUID.randomUUID().toString() + "." + extension;
+
+            // Decode data base64
             byte[] decodedBytes = android.util.Base64.decode(
-                    base64Data.split(",")[1], android.util.Base64.DEFAULT
+                    base64EncodedData, android.util.Base64.DEFAULT
             );
+
+            // Buat direktori jika belum ada
             File dir = new File(imagesPath);
             if (!dir.exists()) {
                 dir.mkdirs();
             }
 
             File file = new File(dir, fileName);
+            String relativePath = "Images/" + fileName;
 
-            // Cek versi Android
+            // Simpan gambar berdasarkan versi Android
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Gunakan java.nio.file.Files.write() untuk API 26 ke atas
+                // Untuk API 26 ke atas
                 java.nio.file.Files.write(file.toPath(), decodedBytes);
             } else {
-                // Gunakan FileOutputStream untuk API di bawah 26
-                FileOutputStream fos = new FileOutputStream(file);
-                fos.write(decodedBytes);
-                fos.close();
+                // Untuk API di bawah 26
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(decodedBytes);
+                }
             }
-        } catch (IOException e) {
+
+            // Simpan info ke CSV
+            saveToCsv(relativePath, label);
+
+            runOnUiThread(() -> {
+                updateConsoleLog("Gambar berhasil disimpan: " + fileName);
+            });
+
+
+        } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error saving image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            runOnUiThread(() -> {
+                updateConsoleLog("Error menyimpan gambar: " + e.getMessage());
+            });
         }
     }
 
+    // Metode untuk menyimpan label ke CSV
     private void saveToCsv(String imagePath, String label) {
         try {
             File file = new File(csvPath);
-            if (!file.getParentFile().exists()) file.getParentFile().mkdirs();
+            if (!file.getParentFile().exists()) {
+                file.getParentFile().mkdirs();
+            }
 
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
-            writer.write(imagePath + "," + label + "\n");
-            writer.close();
+            // Buat file jika belum ada
+            if (!file.exists()) {
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                    writer.write("image_path,label\n"); // Header untuk CSV
+                }
+            }
+
+            // Append data baru ke file CSV
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+                writer.write(imagePath + "," + label + "\n");
+            }
         } catch (IOException e) {
             e.printStackTrace();
+            runOnUiThread(() -> {
+                updateConsoleLog("Error menyimpan label: " + e.getMessage());
+            });
         }
     }
 
@@ -741,25 +859,26 @@ public class StartWorking extends AppCompatActivity {
 
                         try {
 							if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)){
-							    if (!ImgData_BASE64.isEmpty() && !ImgData_LABEL.isEmpty()) {
-									saveBase64Image(ImgData_BASE64, image_captcha_name);
-									saveToCsv("Images/"+image_captcha_name, ImgData_LABEL);
+							    if (!webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty()) {
+									saveBase64Image(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
 									Thread.sleep(300);
-									super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-									Thread.sleep(150);
-									performAutoClick();
+                                    runOnUiThread(() -> {
+                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                                        new Handler().postDelayed(() -> performAutoClick(), 200);
+                                    });
 								} else {
-									super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-									Thread.sleep(190);
-									performAutoClick();
+                                    runOnUiThread(() -> {
+                                        updateConsoleLog("Gambar tidak ditemukan");
+                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                                        new Handler().postDelayed(() -> performAutoClick(), 200);
+                                    });
 								}
 							} else 
 								if (getUrl2.contains("kolotibablo.com") && pageTitle2.contains(title_earning)){
-							    
-									super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-									Thread.sleep(200);
-									performAutoClick();
-								
+                                    runOnUiThread(() -> {
+                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                                        new Handler().postDelayed(() -> performAutoClick(), 200);
+                                    });
 							}
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -1183,12 +1302,22 @@ public class StartWorking extends AppCompatActivity {
     }
 
 
+    private boolean storagePermison = false;
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == STORAGE_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Izin penyimpanan diperlukan!", Toast.LENGTH_SHORT).show();
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                if (storagePermison) {
+                    Toast.makeText(this, "Izin penyimpanan diberikan", Toast.LENGTH_SHORT).show();
+                }
+                storagePermison = true;
+            } else {
+                if (!storagePermison) {
+                    Toast.makeText(this, "Aplikasi membutuhkan izin penyimpanan", Toast.LENGTH_LONG).show();
+                }
+                storagePermison = false;
             }
         }
     }
@@ -1287,17 +1416,10 @@ public class StartWorking extends AppCompatActivity {
                 super.onPageFinished(view, url);
 
                 if (url.contains("kolotibablo.com")) {
-//                    if (pageTitle1.equals(title_earning)) {
-//                        view.evaluateJavascript(inject4Datasets, null);
-//                    } else {
-//                        view.evaluateJavascript(inject4Datasets, null);
-//                    }
-                    view.evaluateJavascript(webAppInterface.scriptInjectData, new ValueCallback<String>() {
-    @Override
-    public void onReceiveValue(String value) {
-        Log.d("JS_EVAL", "Result: " + value);
-    }
-});
+                    if (pageTitle1.equals(title_earning)) {
+                        view.evaluateJavascript(webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData), null);
+						updateConsoleLog("Script Injected | " + title_earning);
+                    }
                 }
 
             }
@@ -1456,6 +1578,7 @@ public class StartWorking extends AppCompatActivity {
 
                 if (consoleEnabled==true) {
                     consoleLog.setText(currentText + "\n" + message);
+					autoScrollLog();
                 } else {
                     consoleLog.setText("...Console log...");
                 }
@@ -1464,7 +1587,7 @@ public class StartWorking extends AppCompatActivity {
         });
     }
 
-    private void autoScrollLog () {
+    private void autoScrollLog() {
         // Scroll otomatis ke bawah agar log terbaru terlihat
         ScrollView scrollView = findViewById(R.id.consoleLogScroll);
         // Tambahkan log baru ke TextView

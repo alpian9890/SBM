@@ -110,7 +110,7 @@ public class WebAppInterface {
     "    startObserving();" +
     "}" +
     "})();";
-    
+
     public String elementFound = "";
     public String elementNotFound = "";
     public String ImgBase64 = "";

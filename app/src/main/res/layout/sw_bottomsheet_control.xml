@@ -174,17 +174,6 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <Switch
-                android:paddingLeft="5dp"
-                android:id="@+id/switchBtnConsole"
-                android:layout_weight="1"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:text="Console"
-                android:textColor="@drawable/switch_text_color"
-                android:thumbTint="@drawable/switch_thumb_color"
-                android:background="@drawable/bg_black_overlay_16rect"/>
-
             <Button
                 android:layout_marginStart="4dp"
                 android:id="@+id/btnSaveTitle"
@@ -194,6 +183,20 @@
                 android:backgroundTint="#F42B7B"
                 android:textColor="@color/black"
                 android:text="Save"/>
+
+            <Switch
+                android:paddingHorizontal="4dp"
+                android:id="@+id/switchBtnConsole"
+                android:layout_weight="1.2"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:text="Console"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:textColor="@drawable/switch_text_color"
+                android:thumbTint="@drawable/switch_thumb_color"
+                android:background="@drawable/bg_black_overlay_16rect"/>
+
         </LinearLayout>
 
     </LinearLayout>
@@ -264,12 +267,8 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:text="Speed"/>
-            <TextView
-                android:id="@+id/speedTestWPM"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0.0"
-                android:fontFamily="monospace"/>
+
+            <include layout="@layout/speed_text"/>
 
         </LinearLayout>
 

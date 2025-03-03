@@ -17,7 +17,7 @@ android {
         minSdk 21
         targetSdk 35
         versionCode 9
-        versionName "Edelweiss 9.3.5"
+        versionName "Edelweiss 9.5.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
