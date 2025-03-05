@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.Manifest;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
@@ -96,9 +97,6 @@ public class StartWorking extends AppCompatActivity {
 
     private static final int STORAGE_PERMISSION_CODE = 101;
     private static final int REQUEST_CODE_102 = 102;
-    String image_captcha_name = UUID.randomUUID().toString();
-    String ImgData_BASE64 = "";
-    String ImgData_LABEL = "";
     String KBEarn = "https://kolotibablo.com";
     ValueCallback<Uri[]> filePathCallback;
     String getUrl1 = "";
@@ -106,6 +104,9 @@ public class StartWorking extends AppCompatActivity {
     String pageTitle1 ="";
     String pageTitle2 = "";
     String title_earning = "Money Earning";
+    public String getTitleEarning() {
+        return title_earning;
+    }
     private static final int FILE_CHOOSER_REQUEST_CODE = 100;
     FloatingActionButton fabControl;
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
@@ -165,7 +166,7 @@ public class StartWorking extends AppCompatActivity {
 
     Switch switchBtnConsole;
     ToggleButton btnPlayPauseWPM;
-    TextView speedTestWPM;
+    TextView speedTestWPM_SW, speedTestWPM_BS;
     ImageView closeConsoleLog;
 
     private final OkHttpClient okClient = new OkHttpClient.Builder()
@@ -175,15 +176,24 @@ public class StartWorking extends AppCompatActivity {
             .build();
 
     // URL server
-    private final String SERVER_URL = "http://47.129.145.21:9890/upload";
+    private final String SERVER_URL = "http://47.129.145.21:9890";
     private final String API_KEY = "019553d7-9890-0202-2025-7a24b83c935d"; // Kunci API untuk autentikasi
+    private String lastBase64Hash = "";
+    private String lastBase64HashLocal = "";
+    private static final String LAST_BASE64_HASH_KEY = "last_base64_hash";
+    private static final String LAST_BASE64_HASH_KEY_LOCAL = "last_base64_hash";
 
 
-    private String basePath = "";// Environment.getExternalStorageDirectory() + "/Datasets";
-    private String imagesPath = ""; // basePath + "/Images";
+    private String basePath = ""; //Environment.getExternalStorageDirectory() + "/Datasets";
+    private String imagesPath = "";// basePath + "/Images";
     private String csvPath = ""; // basePath + "/labels.csv";
 
     WebAppInterface webAppInterface;
+
+    private boolean storagePermission = false;
+    private SharedPreferences preferences;
+    private static final String APP_PREFERENCES = "AppPreferences";
+    private static final String STORAGE_PERMISSION_KEY = "storage_permission_granted";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -195,12 +205,19 @@ public class StartWorking extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_start_working);
 
+        // Inisialisasi SharedPreferences
+        preferences = getSharedPreferences(APP_PREFERENCES, MODE_PRIVATE);
+    
+        // Ambil nilai permission yang tersimpan
+        storagePermission = preferences.getBoolean(STORAGE_PERMISSION_KEY, false);
+
         calculatorSetress = new CalculatorSetress(this);
 
         webViewTab1 = findViewById(R.id.webViewTab1);
         new AdBlockerWebView.init(this).initializeWebView(webViewTab1);
 
-        webAppInterface = new WebAppInterface(this);
+        // Inisialisasi dengan kedua constructor
+        webAppInterface = new WebAppInterface(this, this);
 
         fabControl = findViewById(R.id.fab_control);
         // FAB click listener
@@ -250,17 +267,26 @@ public class StartWorking extends AppCompatActivity {
 		});
         TextView saveData = findViewById(R.id.saveData);
         saveData.setOnClickListener(v -> {
+
+            /*
+            if (isTesting) {
+                runOnUiThread(() -> {
+                    sendKeyEvent(KeyEvent.KEYCODE_ENTER, false);
+                    updateConsoleLog("saveData: [Sending KeyEvent ENTER]");
+                });
+            } */
+
             new Thread(() -> {
                 try {
                     if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)) {
-                        updateConsoleLog("Title Earning Detected");
+                        updateConsoleLog("Page title: " + pageTitle1);
 
                         // Validasi data
                         if (webAppInterface.ImgBase64 != null && !webAppInterface.ImgBase64.isEmpty() &&
                                 webAppInterface.ImgLabel != null && !webAppInterface.ImgLabel.isEmpty()) {
 
                             updateConsoleLog("Data ditemukan: Image (" + webAppInterface.ImgBase64.length() + " chars) dan Label: " + webAppInterface.ImgLabel);
-
+                            checkLastHashFromServer();
                             // Buat JSON untuk dikirim ke server
                             JSONObject jsonData = new JSONObject();
                             jsonData.put("image_base64", webAppInterface.ImgBase64);
@@ -323,8 +349,10 @@ public class StartWorking extends AppCompatActivity {
         editTextTitleKB.setText(title_earning);
 
         loadTitleKB(title_earning);
-        View layoutSpeedText = LayoutInflater.from(this).inflate(R.layout.speed_text, null);
-        speedTestWPM = layoutSpeedText.findViewById(R.id.speedTestWPM);
+        //View layoutSpeedText = LayoutInflater.from(this).inflate(R.layout.speed_text, null);
+        
+        speedTestWPM_SW = findViewById(R.id.speedTestWPM);
+        speedTestWPM_BS = bottomSheetDialog.findViewById(R.id.speedTestWPM);
         btnPlayPauseWPM = bottomSheetDialog.findViewById(R.id.btnPlayPauseWPM);
 		switchBtnConsole = bottomSheetDialog.findViewById(R.id.switchBtnConsole);
 		
@@ -604,7 +632,8 @@ public class StartWorking extends AppCompatActivity {
             pointerCloseL.setX(Math.max(0, Math.min(pointerCloseLPos[0], webViewTab1.getWidth() - pointerCloseL.getWidth())));
             pointerCloseL.setY(Math.max(0, Math.min(pointerCloseLPos[1], webViewTab1.getHeight() - pointerCloseL.getHeight())));
 
-            requestStoragePermissions();
+            setupStorage();
+            checkLastHashFromServer();
 
         });
 
@@ -612,15 +641,51 @@ public class StartWorking extends AppCompatActivity {
 
     }// akhir onCreate
 
+    // Method untuk menghitung hash SHA-256
+    private String calculateSHA256(String data) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes());
+            return bytesToHex(hash);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    // Helper method untuk mengonversi byte array ke string hex
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
     private void sendDataToServer(JSONObject jsonData) {
         try {
+            String base64Data = jsonData.getString("image_base64");
+            String currentHash = calculateSHA256(base64Data);
+
+            // Cek apakah hash sudah ada
+            if (currentHash.equals(lastBase64Hash)) {
+                updateConsoleLog("Data sudah ada, tidak perlu mengirim ulang");
+                return;
+            }
+
+            // Simpan hash baru ke SharedPreferences
+            SharedPreferences.Editor editor = preferences.edit();
+
+            lastBase64Hash = currentHash;
+            editor.putString(LAST_BASE64_HASH_KEY, lastBase64Hash);
+            editor.apply();
+
             // Buat request body
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
             RequestBody body = RequestBody.create(jsonData.toString(), JSON);
 
             // Buat request
             Request request = new Request.Builder()
-                    .url(SERVER_URL)
+                    .url(SERVER_URL + "/upload")
                     .post(body)
                     .build();
 
@@ -665,38 +730,147 @@ public class StartWorking extends AppCompatActivity {
         }
     }
 
+    private void checkLastHashFromServer() {
+        new Thread(() -> {
+            try {
+                Request request = new Request.Builder()
+                        .url(SERVER_URL + "/last-hash")
+                        .build();
+
+                Response response = okClient.newCall(request).execute();
+                if (response.isSuccessful()) {
+                    String lastHash = response.body().string();
+                    runOnUiThread(() -> {
+                        lastBase64Hash = lastHash;
+                        preferences.edit().putString(LAST_BASE64_HASH_KEY, lastBase64Hash).apply();
+                        updateConsoleLog("Updated Last Base64 Hash from Server: 👇\n" + lastBase64Hash);
+                    });
+                }
+            } catch (Exception e) {
+                // Jika offline, gunakan hash dari SharedPreferences
+                lastBase64Hash = preferences.getString(LAST_BASE64_HASH_KEY, lastBase64Hash);
+                lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
+                updateConsoleLog("Offline: Using Last Base64 Hash from SharedPreferences: 👇\n" + lastBase64Hash);
+            }
+        }).start();
+    }
+
     private void setupStorage() {
-        // Definisi path
-        basePath = Environment.getExternalStorageDirectory() + "/Datasets";
+        // Log untuk debugging
+        Log.d("StorageDebug", "setupStorage() dipanggil");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Android 10+ - Gunakan direktori yang dikelola aplikasi
+            File externalFilesDir = getExternalFilesDir(null);
+            if (externalFilesDir != null) {
+                basePath = externalFilesDir.getAbsolutePath() + "/Datasets";
+                Log.d("StorageDebug", "Path untuk Android 10+: " + basePath);
+            } else {
+                Log.e("StorageDebug", "getExternalFilesDir() mengembalikan null");
+                updateConsoleLog("[!] Error: Tidak dapat mendapatkan direktori eksternal");
+            }
+        } else {
+            // Android 9 dan di bawahnya
+            basePath = Environment.getExternalStorageDirectory() + "/Datasets";
+            Log.d("StorageDebug", "Path untuk Android < 10: " + basePath);
+        }
+
         imagesPath = basePath + "/Images";
         csvPath = basePath + "/labels.csv";
 
+        // Log info path
+        Log.d("StorageDebug", "imagesPath: " + imagesPath);
+        Log.d("StorageDebug", "csvPath: " + csvPath);
+
+        // Buat direktori jika belum ada
+        createDirectories();
+
         // Minta izin penyimpanan saat aplikasi dibuka
-        setupStorage();
+        requestStoragePermissions();
+    }
+
+    private void createDirectories() {
+        try {
+            File baseDir = new File(basePath);
+            if (!baseDir.exists()) {
+                boolean baseDirCreated = baseDir.mkdirs();
+                Log.d("StorageDebug", "Membuat basePath: " + basePath + " - Hasil: " + baseDirCreated);
+                updateConsoleLog("[ Mencoba membuat direktori base: " + (baseDirCreated ? "berhasil" : "gagal") + " ]");
+            }
+
+            File imagesDir = new File(imagesPath);
+            if (!imagesDir.exists()) {
+                boolean imagesDirCreated = imagesDir.mkdirs();
+                Log.d("StorageDebug", "Membuat imagesPath: " + imagesPath + " - Hasil: " + imagesDirCreated);
+                updateConsoleLog("[ Mencoba membuat direktori images: " + (imagesDirCreated ? "berhasil" : "gagal") + " ]");
+            }
+        } catch (Exception e) {
+            Log.e("StorageDebug", "Error membuat direktori: " + e.getMessage(), e);
+            updateConsoleLog("[!] Error membuat direktori: " + e.getMessage());
+        }
     }
 
     private void requestStoragePermissions() {
+        Log.d("StorageDebug", "requestStoragePermissions(), SDK: " + Build.VERSION.SDK_INT);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11+ (API 30+)
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                Uri uri = Uri.fromParts("package", getPackageName(), null);
-                intent.setData(uri);
-                startActivityForResult(intent, REQUEST_CODE_102);
-            } catch (Exception e) {
-                Intent intent = new Intent();
-                intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivityForResult(intent, REQUEST_CODE_102);
+            boolean hasAllFilesPermission = Environment.isExternalStorageManager();
+            Log.d("StorageDebug", "Android 11+, hasAllFilesPermission: " + hasAllFilesPermission);
+
+            if (!hasAllFilesPermission) {
+                updateConsoleLog("[ Meminta izin MANAGE_EXTERNAL_STORAGE untuk Android 11+ ]");
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    Uri uri = Uri.fromParts("package", getPackageName(), null);
+                    intent.setData(uri);
+                    startActivityForResult(intent, REQUEST_CODE_102);
+                } catch (Exception e) {
+                    Log.e("StorageDebug", "Error meminta MANAGE_EXTERNAL_STORAGE: " + e.getMessage(), e);
+                    updateConsoleLog("[!] Error meminta izin penyimpanan: " + e.getMessage());
+
+                    // Fallback jika cara spesifik gagal
+                    Intent intent = new Intent();
+                    intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivityForResult(intent, REQUEST_CODE_102);
+                }
+            } else {
+                Log.d("StorageDebug", "MANAGE_EXTERNAL_STORAGE sudah diberikan");
+                updateConsoleLog("[ Izin MANAGE_EXTERNAL_STORAGE sudah diberikan ]");
+                storagePermission = true;
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putBoolean(STORAGE_PERMISSION_KEY, true);
+                editor.apply();
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Android 6+ (API 23+)
-            if (ContextCompat.checkSelfPermission(this,
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            int writePermission = ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
+            Log.d("StorageDebug", "Android 6-10, writePermission status: " +
+                    (writePermission == PackageManager.PERMISSION_GRANTED ? "GRANTED" : "DENIED"));
+
+            if (writePermission != PackageManager.PERMISSION_GRANTED) {
+                updateConsoleLog("[ Meminta izin WRITE_EXTERNAL_STORAGE ]");
                 ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                         STORAGE_PERMISSION_CODE);
+            } else {
+                Log.d("StorageDebug", "WRITE_EXTERNAL_STORAGE sudah diberikan");
+                updateConsoleLog("[ Izin WRITE_EXTERNAL_STORAGE sudah diberikan ]");
+                // Izin sudah diberikan, update jika belum tersimpan
+                if (!storagePermission) {
+                    storagePermission = true;
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putBoolean(STORAGE_PERMISSION_KEY, true);
+                    editor.apply();
+                }
             }
+        } else {
+            // Android 5.1 dan di bawahnya
+            Log.d("StorageDebug", "SDK < 23, izin dianggap sudah diberikan");
+            updateConsoleLog("[ Izin penyimpanan otomatis diberikan untuk Android 5.1- ]");
+            storagePermission = true;
         }
     }
     /*
@@ -713,91 +887,197 @@ public class StartWorking extends AppCompatActivity {
     }*/
 
     private void saveBase64Image(String base64Data, String label) {
+        Log.d("StorageDebug", "saveBase64Image() dipanggil dengan label: " + label);
+
+        if (!storagePermission) {
+            Log.e("StorageDebug", "Izin penyimpanan belum diberikan");
+            updateConsoleLog("[!] Error: Izin penyimpanan belum diberikan");
+            requestStoragePermissions();
+            return;
+        }
+
         try {
+            // Cek apakah base64Data valid
+            if (base64Data == null || base64Data.isEmpty()) {
+                Log.e("StorageDebug", "Data base64 kosong");
+                updateConsoleLog("[!] Error: Data base64 kosong");
+                return;
+            }
+
+
+
+            // Debug info
+            updateConsoleLog("Panjang base64: 👇\n" + base64Data.length() + " startWith: " + base64Data.substring(0, Math.min(20, base64Data.length())));
+
             // Pisahkan MIME type dan data base64
-            String[] parts = base64Data.split(",");
+            String[] parts;
+            try {
+                parts = base64Data.split(",");
+                if (parts.length < 2) {
+                    Log.e("StorageDebug", "Format base64 tidak valid, tidak dapat split dengan ',': " +
+                            base64Data.substring(0, Math.min(50, base64Data.length())));
+                    updateConsoleLog("[!] Error: Format base64 tidak valid (tidak ada pemisah)");
+                    return;
+                }
+            } catch (Exception e) {
+                Log.e("StorageDebug", "Error saat memisahkan base64: " + e.getMessage(), e);
+                updateConsoleLog("[!] Error memproses base64: " + e.getMessage());
+                return;
+            }
+
             String mimeTypeHeader = parts[0]; // data:image/png;base64
             String base64EncodedData = parts[1];
 
             // Ekstrak ekstensi file dari MIME type
-            String extension = "";
-            if (mimeTypeHeader.contains("image/")) {
-                extension = mimeTypeHeader.split("image/")[1].split(";")[0];
-            } else {
-                // Default jika format tidak sesuai
-                throw new IllegalArgumentException("Format base64 tidak valid: " + mimeTypeHeader);
+            String extension = "png"; // Default
+            try {
+                if (mimeTypeHeader.contains("image/")) {
+                    extension = mimeTypeHeader.split("image/")[1].split(";")[0];
+                    Log.d("StorageDebug", "Ekstensi terdeteksi: " + extension);
+                } else {
+                    Log.w("StorageDebug", "Tidak dapat mendeteksi MIME type, menggunakan default: " + extension);
+                    updateConsoleLog("[ Peringatan: Format gambar tidak terdeteksi, menggunakan JPEG ]");
+                }
+            } catch (Exception e) {
+                Log.e("StorageDebug", "Error saat ekstrak MIME type: " + e.getMessage(), e);
+                updateConsoleLog("[!] Error ekstrak format gambar: " + e.getMessage());
+                // Tetap gunakan default
             }
 
             // Generate nama file dengan UUID dan ekstensi
             String fileName = UUID.randomUUID().toString() + "." + extension;
+            Log.d("StorageDebug", "Nama file: " + fileName);
 
             // Decode data base64
-            byte[] decodedBytes = android.util.Base64.decode(
-                    base64EncodedData, android.util.Base64.DEFAULT
-            );
+            byte[] decodedBytes;
+            try {
+                decodedBytes = android.util.Base64.decode(
+                        base64EncodedData, android.util.Base64.DEFAULT
+                );
+                Log.d("StorageDebug", "Panjang bytes setelah decode: " + decodedBytes.length);
+            } catch (Exception e) {
+                Log.e("StorageDebug", "Error saat decode base64: " + e.getMessage(), e);
+                updateConsoleLog("[!] Error decode base64: " + e.getMessage());
+                return;
+            }
 
             // Buat direktori jika belum ada
             File dir = new File(imagesPath);
             if (!dir.exists()) {
-                dir.mkdirs();
+                boolean created = dir.mkdirs();
+                Log.d("StorageDebug", "Membuat direktori images: " + created);
+                if (!created) {
+                    Log.e("StorageDebug", "Gagal membuat direktori: " + imagesPath);
+                    updateConsoleLog("[!] Error: Gagal membuat direktori " + imagesPath);
+                    return;
+                }
+            }
+
+            // Cek apakah direktori dapat ditulis
+            if (!dir.canWrite()) {
+                Log.e("StorageDebug", "Direktori tidak dapat ditulis: " + imagesPath);
+                updateConsoleLog("[!] Error: Tidak dapat menulis ke direktori " + imagesPath);
+                return;
             }
 
             File file = new File(dir, fileName);
             String relativePath = "Images/" + fileName;
+            Log.d("StorageDebug", "Path file lengkap: " + file.getAbsolutePath());
 
             // Simpan gambar berdasarkan versi Android
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Untuk API 26 ke atas
-                java.nio.file.Files.write(file.toPath(), decodedBytes);
-            } else {
-                // Untuk API di bawah 26
-                try (FileOutputStream fos = new FileOutputStream(file)) {
-                    fos.write(decodedBytes);
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Untuk API 26 ke atas
+                    java.nio.file.Files.write(file.toPath(), decodedBytes);
+                    Log.d("StorageDebug", "File ditulis dengan Files.write (API 26+)");
+                } else {
+                    // Untuk API di bawah 26
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
+                        fos.write(decodedBytes);
+                        Log.d("StorageDebug", "File ditulis dengan FileOutputStream (API <26)");
+                    }
                 }
+
+                // Verifikasi file tertulis
+                if (file.exists() && file.length() > 0) {
+                    Log.d("StorageDebug", "File berhasil dibuat: " + file.getAbsolutePath() +
+                            " dengan ukuran " + file.length() + " bytes");
+                } else {
+                    Log.e("StorageDebug", "File tidak tertulis dengan benar: " +
+                            (file.exists() ? "Ada tapi ukuran 0" : "Tidak ada"));
+                    updateConsoleLog("[!] Error: File tidak tersimpan dengan benar");
+                    return;
+                }
+
+                // Simpan info ke CSV
+                saveToCsv(relativePath, label);
+
+                runOnUiThread(() -> {
+                    String newHashLocal = calculateSHA256(base64Data);
+                    lastBase64HashLocal = newHashLocal;
+                    preferences.edit().putString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal).apply();
+                    updateConsoleLog(" Last Base64 Hash Local: " + lastBase64HashLocal);
+                    updateConsoleLog("[ Gambar berhasil disimpan: " + fileName + " ]");
+                });
+            } catch (Exception e) {
+                Log.e("StorageDebug", "Error menyimpan file: " + e.getMessage(), e);
+                updateConsoleLog("[!] Error menyimpan gambar: " + file.getAbsolutePath() +
+                        " - " + e.getMessage());
+                return;
             }
-
-            // Simpan info ke CSV
-            saveToCsv(relativePath, label);
-
-            runOnUiThread(() -> {
-                updateConsoleLog("Gambar berhasil disimpan: " + fileName);
-            });
-
-
         } catch (Exception e) {
-            e.printStackTrace();
-            runOnUiThread(() -> {
-                updateConsoleLog("Error menyimpan gambar: " + e.getMessage());
-            });
+            Log.e("StorageDebug", "Error tidak terduga: " + e.getMessage(), e);
+            updateConsoleLog("[!] Error tidak terduga: " + e.getMessage());
         }
     }
 
     // Metode untuk menyimpan label ke CSV
     private void saveToCsv(String imagePath, String label) {
+        Log.d("StorageDebug", "saveToCsv() dipanggil: " + imagePath + ", " + label);
+
         try {
             File file = new File(csvPath);
-            if (!file.getParentFile().exists()) {
-                file.getParentFile().mkdirs();
+            File parentDir = file.getParentFile();
+
+            if (parentDir != null && !parentDir.exists()) {
+                boolean created = parentDir.mkdirs();
+                Log.d("StorageDebug", "Membuat direktori CSV parent: " + created);
+                if (!created) {
+                    Log.e("StorageDebug", "Gagal membuat direktori CSV parent: " + parentDir.getAbsolutePath());
+                    updateConsoleLog("[!] Error: Gagal membuat direktori CSV parent");
+                    return;
+                }
             }
 
+            boolean isNewFile = !file.exists();
+            Log.d("StorageDebug", "File CSV " + (isNewFile ? "baru" : "sudah ada"));
+
             // Buat file jika belum ada
-            if (!file.exists()) {
+            if (isNewFile) {
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                     writer.write("image_path,label\n"); // Header untuk CSV
+                    Log.d("StorageDebug", "File CSV baru dibuat dengan header");
+                } catch (IOException e) {
+                    Log.e("StorageDebug", "Error membuat file CSV: " + e.getMessage(), e);
+                    updateConsoleLog("[!] Error membuat file CSV: " + e.getMessage());
+                    return;
                 }
             }
 
             // Append data baru ke file CSV
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
                 writer.write(imagePath + "," + label + "\n");
+                Log.d("StorageDebug", "Data berhasil ditambahkan ke CSV: " + imagePath + "," + label);
+            } catch (IOException e) {
+                Log.e("StorageDebug", "Error menambahkan data ke CSV: " + e.getMessage(), e);
+                updateConsoleLog("[!] Error menambahkan data ke CSV: " + e.getMessage());
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            runOnUiThread(() -> {
-                updateConsoleLog("Error menyimpan label: " + e.getMessage());
-            });
+        } catch (Exception e) {
+            Log.e("StorageDebug", "Error tidak terduga di saveToCsv: " + e.getMessage(), e);
+            updateConsoleLog("[!] Error menyimpan label: " + e.getMessage());
         }
     }
+
 
     private Runnable updateWPMLoop = new Runnable() {
         @Override
@@ -811,12 +1091,15 @@ public class StartWorking extends AppCompatActivity {
 
                 double wpm = totalKata / elapsedMinutes;
                 String formattedWPM = String.format(Locale.getDefault(), "%.2f", wpm);
-                speedTestWPM.setText(formattedWPM);
+                if(speedTestWPM_SW != null) speedTestWPM_SW.setText(formattedWPM);
+                if(speedTestWPM_BS != null) speedTestWPM_BS.setText(formattedWPM);
 
                 handler.postDelayed(this, 1000); // Update setiap 1 detik
             }
         }
     };
+
+    private boolean isEnterUpCLick = false;
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
@@ -849,55 +1132,103 @@ public class StartWorking extends AppCompatActivity {
             return true;
         }
 
+        /*
         if (isTesting && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
             // Tangani tombol ENTER dengan ACTION_UP
-            //super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
             totalKata++;
             if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")) {
-                if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
+                if (pageTitle1.contains(title_earning) || pageTitle2.contains(title_earning)) {
                     new Thread(() -> {
 
                         try {
 							if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)){
 							    if (!webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty()) {
 									saveBase64Image(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
-									Thread.sleep(300);
-                                    runOnUiThread(() -> {
-                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                                        new Handler().postDelayed(() -> performAutoClick(), 200);
-                                    });
+									Thread.sleep(80);
+                                    runOnUiThread(() -> {super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));});
 								} else {
                                     runOnUiThread(() -> {
                                         updateConsoleLog("Gambar tidak ditemukan");
-                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                                        new Handler().postDelayed(() -> performAutoClick(), 200);
                                     });
+                                    isEnterUpCLick = true;
 								}
 							} else 
 								if (getUrl2.contains("kolotibablo.com") && pageTitle2.contains(title_earning)){
-                                    runOnUiThread(() -> {
-                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                                        new Handler().postDelayed(() -> performAutoClick(), 200);
-                                    });
+                                    isEnterUpCLick = true;
 							}
                         } catch (InterruptedException e) {
                             e.printStackTrace();
+                            updateConsoleLog("InterruptedException: " + e.getMessage());
+                            isEnterUpCLick = true;
                         }
                     }).start();
+
+                    if (isEnterUpCLick) {
+                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                        isEnterUpCLick = false;
+                        return true;
+                    }
+                    if (isEnterUpCLick && pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
+                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                        isEnterUpCLick = false;
+                        new Handler().postDelayed(() -> performAutoClick(), 200);
+                        return true;
+                    }
                 }
             }
             return true;
-        }
+        }*/
 
         if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
 
             if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
 
-                if (!isTesting && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
-                    // Tangani tombol ENTER dengan ACTION_UP
-                    super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                    new Handler().postDelayed(() -> performAutoClick(), 200);
-                    return true;
+                if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+                    if (isTesting) {
+                        totalKata++;
+                        new Thread(() -> {
+                            try {
+                                if (!webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty()) {
+                                    //String base64Data = jsonData.getString("image_base64");
+                                    String currentHashLocal = calculateSHA256(webAppInterface.ImgBase64);
+									lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
+                                    // Cek apakah hash sudah ada
+                                    if (currentHashLocal.equals(lastBase64HashLocal)) {
+                                        runOnUiThread(() -> {
+                                            super.dispatchKeyEvent(event);
+                                            updateConsoleLog("Data sudah ada, tidak perlu menyimpan ulang");
+                                            new Handler().postDelayed(() -> performAutoClick(), 200);
+                                        });
+                                        return;
+                                    }
+
+                                    // Simpan hash baru ke SharedPreferences
+                                    SharedPreferences.Editor editor = preferences.edit();
+                                    editor.putString(LAST_BASE64_HASH_KEY_LOCAL, currentHashLocal);
+                                    editor.apply();
+                                    saveBase64Image(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
+                                    runOnUiThread(() -> {
+                                        super.dispatchKeyEvent(event);
+                                        new Handler().postDelayed(() -> performAutoClick(), 200);
+                                    });
+                                    //Thread.sleep(30);
+                                } else {
+                                    runOnUiThread(() -> {
+                                        updateConsoleLog("Gambar tidak ditemukan");
+                                    });
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                updateConsoleLog("Exception: " + e.getMessage());
+                            }
+                        }).start();
+                    } else {
+                        // Tangani tombol ENTER dengan ACTION_UP
+                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                        new Handler().postDelayed(() -> performAutoClick(), 300);
+                        return true;
+                    }
+
                 }
 
                 if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
@@ -949,6 +1280,61 @@ public class StartWorking extends AppCompatActivity {
                 }
 
             }// End page title kb
+             else if (pageTitle1.contains(title_earning)) {
+                 if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
+                     if (isTesting) {
+                         totalKata++;
+                         new Thread(() -> {
+                             try {
+                                 if (!webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty()) {
+
+                                     String currentHashLocal = calculateSHA256(webAppInterface.ImgBase64);
+									 lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
+                                     // Cek apakah hash sudah ada
+                                     if (currentHashLocal.equals(lastBase64HashLocal)) {
+                                         runOnUiThread(() -> {
+                                             super.dispatchKeyEvent(event);
+                                             updateConsoleLog("Data sudah ada, tidak perlu menyimpan ulang");
+                                             if (pageTitle2.contains(title_earning)) {
+                                                new Handler().postDelayed(() -> performAutoClick(), 200);
+                                             }
+                                         });
+                                         return;
+                                     }
+
+                                     // Simpan hash baru ke SharedPreferences
+                                     SharedPreferences.Editor editor = preferences.edit();
+                                     editor.putString(LAST_BASE64_HASH_KEY_LOCAL, currentHashLocal);
+                                     editor.apply();
+                                     saveBase64Image(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
+                                     //Thread.sleep(30);
+                                     runOnUiThread(() -> {
+                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                                        if (pageTitle2.contains(title_earning)) {
+                                            new Handler().postDelayed(() -> performAutoClick(), 200);
+                                         }
+                                    });
+                                     //return;
+                                 } else {
+                                     runOnUiThread(() -> {
+                                         updateConsoleLog("Gambar tidak ditemukan");
+                                     });
+                                 }
+                             } catch (Exception e) {
+                                 e.printStackTrace();
+                                 updateConsoleLog("Exception: " + e.getMessage());
+                             }
+                         }).start();
+                     } else {
+                         super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+                         if (pageTitle2.contains(title_earning)) {
+                            new Handler().postDelayed(() -> performAutoClick(), 200);
+                         }
+                         return true;
+                     }
+
+                 }
+            }
 
         }// end kolotibablo.com
 
@@ -1302,24 +1688,56 @@ public class StartWorking extends AppCompatActivity {
     }
 
 
-    private boolean storagePermison = false;
-    @Override
+    
+    
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == STORAGE_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                if (storagePermison) {
-                    Toast.makeText(this, "Izin penyimpanan diberikan", Toast.LENGTH_SHORT).show();
+            try {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (!storagePermission) {
+                        // Update nilai di variabel
+                        storagePermission = true;
+                        
+                        // Simpan nilai ke SharedPreferences
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putBoolean(STORAGE_PERMISSION_KEY, true);
+                        editor.apply();
+                        
+                        updateConsoleLog("[ Izin penyimpanan diberikan ]");
+                        Toast.makeText(this, "Izin penyimpanan diberikan", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    if (storagePermission) {
+                        // Update nilai di variabel
+                        storagePermission = false;
+                        
+                        // Simpan nilai ke SharedPreferences
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putBoolean(STORAGE_PERMISSION_KEY, false);
+                        editor.apply();
+                        
+                        Toast.makeText(this, "Aplikasi membutuhkan izin penyimpanan", Toast.LENGTH_LONG).show();
+                        updateConsoleLog("[ Aplikasi membutuhkan izin penyimpanan ]");
+                    }
                 }
-                storagePermison = true;
-            } else {
-                if (!storagePermison) {
-                    Toast.makeText(this, "Aplikasi membutuhkan izin penyimpanan", Toast.LENGTH_LONG).show();
-                }
-                storagePermison = false;
+            } catch (Exception e) {
+                updateConsoleLog("[!] Error: " + e.getMessage());
             }
         }
+    }
+
+    // Method onResume atau saat aplikasi dibuka kembali
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Muat hash terakhir dari SharedPreferences
+        //lastBase64Hash = preferences.getString(LAST_BASE64_HASH_KEY, lastBase64Hash);
+        lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
+        //updateConsoleLog("Last Base64 Hash Server: " + lastBase64Hash);
+        updateConsoleLog("Last Base64 Hash Local: " + lastBase64HashLocal);
+
+        checkLastHashFromServer();
     }
 
     @Override
@@ -1331,6 +1749,30 @@ public class StartWorking extends AppCompatActivity {
                 Uri[] result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
                 filePathCallback.onReceiveValue(result);
                 filePathCallback = null;
+            }
+        }
+
+        if (requestCode == REQUEST_CODE_102) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                boolean hasAllFilesPermission = Environment.isExternalStorageManager();
+                Log.d("StorageDebug", "onActivityResult, hasAllFilesPermission: " + hasAllFilesPermission);
+
+                if (hasAllFilesPermission) {
+                    updateConsoleLog("[ Izin MANAGE_EXTERNAL_STORAGE diberikan ]");
+                    storagePermission = true;
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putBoolean(STORAGE_PERMISSION_KEY, true);
+                    editor.apply();
+
+                    // Buat direktori setelah izin diberikan
+                    createDirectories();
+                } else {
+                    updateConsoleLog("[!] Izin MANAGE_EXTERNAL_STORAGE ditolak");
+                    storagePermission = false;
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putBoolean(STORAGE_PERMISSION_KEY, false);
+                    editor.apply();
+                }
             }
         }
 
@@ -1416,10 +1858,8 @@ public class StartWorking extends AppCompatActivity {
                 super.onPageFinished(view, url);
 
                 if (url.contains("kolotibablo.com")) {
-                    if (pageTitle1.equals(title_earning)) {
-                        view.evaluateJavascript(webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData), null);
-						updateConsoleLog("Script Injected | " + title_earning);
-                    }
+                    view.evaluateJavascript(webAppInterface.scriptInjectData, null);
+					updateConsoleLog("Script Injected | " + title_earning);
                 }
 
             }

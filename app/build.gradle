@@ -12,12 +12,13 @@ android {
     namespace 'alv.splash.browser'
     compileSdk 35
 
+    // Saya menggunakan minSdk 21 supaya kompatibel di berbagai smartphone
     defaultConfig {
         applicationId "alv.splash.browser"
         minSdk 21
         targetSdk 35
         versionCode 9
-        versionName "Edelweiss 9.5.0"
+        versionName "Edelweiss 9.6.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
