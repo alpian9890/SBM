@@ -283,4 +283,38 @@
     </LinearLayout>
 
 </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp"
+        android:layout_marginTop="4dp"
+        android:gravity="center">
+
+        <TextView
+            android:layout_margin="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="When enabled, captcha images and labels will be saved."
+            android:textColor="@color/yellow"
+            android:textSize="12sp"
+            android:fontFamily="monospace"/>
+
+        <Switch
+            android:layout_margin="4dp"
+            android:paddingHorizontal="4dp"
+            android:id="@+id/switchBtnScraping"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Record Captcha"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:textColor="@drawable/switch_text_color"
+            android:thumbTint="@drawable/switch_thumb_color"
+            android:background="@drawable/bg_black_overlay_16rect"/>
+
+
+
+    </LinearLayout>
 </LinearLayout>

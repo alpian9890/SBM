@@ -108,7 +108,7 @@ public class StartWorking extends AppCompatActivity {
         return title_earning;
     }
     private static final int FILE_CHOOSER_REQUEST_CODE = 100;
-    FloatingActionButton fabControl;
+    FloatingActionButton fabControl, fabEnter;
     ImageView pageSecure1, pageSecure2, refreshTab1, refreshTab2;
     TextView titleTab1;
     TextView titleTab2;
@@ -161,10 +161,14 @@ public class StartWorking extends AppCompatActivity {
     private long startTime;
     private int totalKata = 0;
     private boolean isTesting = false;
+    private boolean scrapingEnabled = false;
+    public boolean isScrapingEnabled() {
+        return scrapingEnabled;
+    }
     private boolean consoleEnabled = false;
 	private boolean isLogCopied = false;
 
-    Switch switchBtnConsole;
+    Switch switchBtnConsole, switchBtnScraping;
     ToggleButton btnPlayPauseWPM;
     TextView speedTestWPM_SW, speedTestWPM_BS;
     ImageView closeConsoleLog;
@@ -189,6 +193,8 @@ public class StartWorking extends AppCompatActivity {
     private String csvPath = ""; // basePath + "/labels.csv";
 
     WebAppInterface webAppInterface;
+
+    private CaptchaDataManager captchaDataManager;
 
     private boolean storagePermission = false;
     private SharedPreferences preferences;
@@ -215,13 +221,16 @@ public class StartWorking extends AppCompatActivity {
 
         webViewTab1 = findViewById(R.id.webViewTab1);
         new AdBlockerWebView.init(this).initializeWebView(webViewTab1);
-
+		
         // Inisialisasi dengan kedua constructor
-        webAppInterface = new WebAppInterface(this, this);
+        webAppInterface = new WebAppInterface(this);
+        captchaDataManager = new CaptchaDataManager(this);
 
         fabControl = findViewById(R.id.fab_control);
+		fabEnter = findViewById(R.id.fabEnter);
         // FAB click listener
         fabControl.setOnClickListener(v -> showBottomSheet());
+		fabEnter.setOnClickListener(v -> sendKeyEvent(KeyEvent.KEYCODE_ENTER, false));
 		closeConsoleLog = findViewById(R.id.closeConsoleLog);
 		
         
@@ -254,27 +263,14 @@ public class StartWorking extends AppCompatActivity {
 
         TextView injectScript = findViewById(R.id.injectScript);
 		injectScript.setOnClickListener(v -> {
-			updateConsoleLog("Inject_Debug: " + webAppInterface.scriptInjectData.length());
-            updateConsoleLog("String JS: " + webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData));
-            webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, new ValueCallback<String>() {
-                @Override
-                public void onReceiveValue(String value) {
-                    updateConsoleLog("onReceiveValue: " + value);
-					Log.d("Inject_Debug", "String webAppInterface.scriptInjectData: " + webAppInterface.removeSpacesStringBuilder(webAppInterface.scriptInjectData));
-                }
-            });
+			updateConsoleLog("Start Injected script: " + webAppInterface.scriptInjectData.length());
+            updateConsoleLog("String JS: " + webAppInterface.makeSingleLine(webAppInterface.scriptInjectData));
+            webViewTab1.evaluateJavascript(webAppInterface.scriptInjectData, null);
 			Log.i("Inject_WebView", "Start Injected script");
 		});
         TextView saveData = findViewById(R.id.saveData);
         saveData.setOnClickListener(v -> {
 
-            /*
-            if (isTesting) {
-                runOnUiThread(() -> {
-                    sendKeyEvent(KeyEvent.KEYCODE_ENTER, false);
-                    updateConsoleLog("saveData: [Sending KeyEvent ENTER]");
-                });
-            } */
 
             new Thread(() -> {
                 try {
@@ -347,14 +343,16 @@ public class StartWorking extends AppCompatActivity {
         btnSaveTitle = bottomSheetDialog.findViewById(R.id.btnSaveTitle);
 
         editTextTitleKB.setText(title_earning);
+		
+		loadTitleKB(title_earning);
 
-        loadTitleKB(title_earning);
         //View layoutSpeedText = LayoutInflater.from(this).inflate(R.layout.speed_text, null);
         
         speedTestWPM_SW = findViewById(R.id.speedTestWPM);
         speedTestWPM_BS = bottomSheetDialog.findViewById(R.id.speedTestWPM);
         btnPlayPauseWPM = bottomSheetDialog.findViewById(R.id.btnPlayPauseWPM);
 		switchBtnConsole = bottomSheetDialog.findViewById(R.id.switchBtnConsole);
+        switchBtnScraping = bottomSheetDialog.findViewById(R.id.switchBtnScraping);
 		
 		closeConsoleLog.setOnClickListener(v -> {
             RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
@@ -390,11 +388,11 @@ public class StartWorking extends AppCompatActivity {
 		switchBtnConsole.setOnCheckedChangeListener((buttonView, isChecked) -> {
             RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
             consoleContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            if (isChecked) {
-                consoleEnabled = true;
-            } else {
-                consoleEnabled = false;
-            }
+            consoleEnabled = isChecked;
+        });
+
+        switchBtnScraping.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            scrapingEnabled = isChecked;
         });
 		
         btnSaveTitle.setOnClickListener(v -> {
@@ -743,14 +741,15 @@ public class StartWorking extends AppCompatActivity {
                     runOnUiThread(() -> {
                         lastBase64Hash = lastHash;
                         preferences.edit().putString(LAST_BASE64_HASH_KEY, lastBase64Hash).apply();
-                        updateConsoleLog("Updated Last Base64 Hash from Server: 👇\n" + lastBase64Hash);
+                        updateConsoleLog("Updated Last Base64 Hash from Server:\n" + lastBase64Hash);
                     });
                 }
             } catch (Exception e) {
                 // Jika offline, gunakan hash dari SharedPreferences
                 lastBase64Hash = preferences.getString(LAST_BASE64_HASH_KEY, lastBase64Hash);
                 lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
-                updateConsoleLog("Offline: Using Last Base64 Hash from SharedPreferences: 👇\n" + lastBase64Hash);
+                updateConsoleLog(e.getMessage());
+                updateConsoleLog(" LOCAL: Using Last Base64 Hash from SharedPreferences: 👇\n" + lastBase64Hash);
             }
         }).start();
     }
@@ -885,6 +884,138 @@ public class StartWorking extends AppCompatActivity {
             }
         }
     }*/
+
+    /**
+     * Migrate existing data from files to SQLite
+     */
+    private void migrateFilesToDatabase() {
+        Log.d("Migration", "Starting migration...");
+        updateConsoleLog("[ Starting migration to SQLite... ]");
+
+        new Thread(() -> {
+            try {
+                if (captchaDataManager == null) {
+                    captchaDataManager = new CaptchaDataManager(this);
+                }
+
+                String imagesPath = getExternalFilesDir("Datasets").getPath() + "/images";
+                String csvPath = getExternalFilesDir("Datasets").getPath() + "/labels.csv";
+
+                captchaDataManager.importFromFileSystem(imagesPath, csvPath);
+
+                runOnUiThread(() -> {
+                    updateConsoleLog("[ Migration completed successfully ]");
+                });
+            } catch (Exception e) {
+                Log.e("Migration", "Error during migration: " + e.getMessage(), e);
+                runOnUiThread(() -> {
+                    updateConsoleLog("[!] Migration error: " + e.getMessage());
+                });
+            }
+        }).start();
+    }
+
+    /**
+     * Match a CAPTCHA image with database and return label if found
+     */
+    public String matchCaptchaImage(String base64Data) {
+        Log.d("CaptchaMatch", "matchCaptchaImage() called");
+
+        if (base64Data == null || base64Data.isEmpty()) {
+            Log.e("CaptchaMatch", "Base64 data is empty");
+            return null;
+        }
+
+        try {
+            if (captchaDataManager == null) {
+                captchaDataManager = new CaptchaDataManager(this);
+            }
+
+            // Get matching label
+            String label = captchaDataManager.getLabelForImage(base64Data);
+
+            if (label != null) {
+                Log.d("CaptchaMatch", "Found matching CAPTCHA: " + label);
+                updateConsoleLog("[ Match found: " + label + " ]");
+                return label;
+            } else {
+                Log.d("CaptchaMatch", "No match found");
+                updateConsoleLog("[ No match found ]");
+                return null;
+            }
+        } catch (Exception e) {
+            Log.e("CaptchaMatch", "Error matching: " + e.getMessage(), e);
+            updateConsoleLog("[!] Matching error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Show CAPTCHA suggestion to user
+     */
+    private void showCaptchaSuggestion(String suggestedLabel) {
+        runOnUiThread(() -> {
+            // Create popup with suggestion
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("CAPTCHA Suggestion")
+                    .setMessage("Suggested text: " + suggestedLabel)
+                    .setPositiveButton("Use", (dialog, id) -> {
+                        // Here you would auto-fill the CAPTCHA input field
+                        //webAppInterface.fillCaptchaField(suggestedLabel);
+                        Toast.makeText(getApplicationContext(), "Suggested text: " + suggestedLabel, Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Cancel", (dialog, id) -> {
+                        dialog.dismiss();
+                    });
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        });
+    }
+
+    public void saveBase64ImageToDb(String base64Data, String label) {
+        Log.d("StorageDebug", "saveBase64ImageToDb() called");
+
+        if (!storagePermission) {
+            Log.e("StorageDebug", "Storage permission not granted");
+            updateConsoleLog("[!] Error: Storage permission not granted");
+            requestStoragePermissions();
+            return;
+        }
+
+        try {
+            if (base64Data == null || base64Data.isEmpty()) {
+                Log.e("StorageDebug", "Base64 data is empty");
+                updateConsoleLog("[!] Error: Base64 data is empty");
+                return;
+            }
+
+            // Debug info
+            updateConsoleLog("Base64 length: 👇\n" + base64Data.length() + " startWith: " +
+                    base64Data.substring(0, Math.min(21, base64Data.length())));
+
+            // Initialize manager if needed
+            if (captchaDataManager == null) {
+                captchaDataManager = new CaptchaDataManager(this);
+            }
+
+            // Save to SQLite
+            boolean saved = captchaDataManager.saveCaptchaData(base64Data, label);
+
+            if (saved) {
+                String newHash = calculateSHA256(base64Data);
+                lastBase64HashLocal = newHash;
+                preferences.edit().putString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal).apply();
+
+                updateConsoleLog("Last Base64 Hash Local: " + lastBase64HashLocal);
+                updateConsoleLog("[ Image successfully saved to database ]");
+            } else {
+                updateConsoleLog("[!] Image already exists in database or error occurred");
+            }
+        } catch (Exception e) {
+            Log.e("StorageDebug", "Unexpected error: " + e.getMessage(), e);
+            updateConsoleLog("[!] Unexpected error: " + e.getMessage());
+        }
+    }
 
     private void saveBase64Image(String base64Data, String label) {
         Log.d("StorageDebug", "saveBase64Image() dipanggil dengan label: " + label);
@@ -1132,6 +1263,15 @@ public class StartWorking extends AppCompatActivity {
             return true;
         }
 
+        if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
+            super.dispatchKeyEvent(event);
+            if (isTesting) {
+                totalKata++;
+            }
+            return true;
+        }
+
         /*
         if (isTesting && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
             // Tangani tombol ENTER dengan ACTION_UP
@@ -1184,67 +1324,27 @@ public class StartWorking extends AppCompatActivity {
             if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
 
                 if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
-                    if (isTesting) {
-                        totalKata++;
-                        new Thread(() -> {
-                            try {
-                                if (!webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty()) {
-                                    //String base64Data = jsonData.getString("image_base64");
-                                    String currentHashLocal = calculateSHA256(webAppInterface.ImgBase64);
-									lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
-                                    // Cek apakah hash sudah ada
-                                    if (currentHashLocal.equals(lastBase64HashLocal)) {
-                                        runOnUiThread(() -> {
-                                            super.dispatchKeyEvent(event);
-                                            updateConsoleLog("Data sudah ada, tidak perlu menyimpan ulang");
-                                            new Handler().postDelayed(() -> performAutoClick(), 200);
-                                        });
-                                        return;
-                                    }
-
-                                    // Simpan hash baru ke SharedPreferences
-                                    SharedPreferences.Editor editor = preferences.edit();
-                                    editor.putString(LAST_BASE64_HASH_KEY_LOCAL, currentHashLocal);
-                                    editor.apply();
-                                    saveBase64Image(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
-                                    runOnUiThread(() -> {
-                                        super.dispatchKeyEvent(event);
-                                        new Handler().postDelayed(() -> performAutoClick(), 200);
-                                    });
-                                    //Thread.sleep(30);
-                                } else {
-                                    runOnUiThread(() -> {
-                                        updateConsoleLog("Gambar tidak ditemukan");
-                                    });
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                updateConsoleLog("Exception: " + e.getMessage());
-                            }
-                        }).start();
-                    } else {
-                        // Tangani tombol ENTER dengan ACTION_UP
-                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                        new Handler().postDelayed(() -> performAutoClick(), 300);
-                        return true;
-                    }
-
+                    // Tangani tombol ENTER dengan ACTION_UP
+                    super.dispatchKeyEvent(event);
+                    new Handler().postDelayed(() -> performAutoClick(), 200);
+                    return true;
                 }
 
                 if (event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE && event.getAction() == KeyEvent.ACTION_UP) {
                     // Tangani tombol ESCAPE dengan ACTION_UP
-                    super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE));
-                    new Handler().postDelayed(() -> performAutoClick(), 300);
+                    super.dispatchKeyEvent(event);
+                    new Handler().postDelayed(() -> performAutoClick(), 200);
                     return true;
                 }
 
                 if (event.getAction() == KeyEvent.ACTION_DOWN &&
                     event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7) {
-                    webViewTab1.requestFocus(); // Root view batas pointerLeft
-                    simulateTouch(webViewTab1, lastX_left, lastY_left);
-                    toggleClick = true;
+					webViewTab1.requestFocus(); // Root view batas pointerLeft 
+					simulateTouch(webViewTab1, lastX_left, lastY_left);
+					toggleClick = true;
                     return true;
-                }
+				}
+				
                 if (event.getAction() == KeyEvent.ACTION_DOWN &&
                         event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_9) {
                     viewGecko.requestFocus(); // Root view batas pointerRight
@@ -1280,64 +1380,28 @@ public class StartWorking extends AppCompatActivity {
                 }
 
             }// End page title kb
-             else if (pageTitle1.contains(title_earning)) {
-                 if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
-                     if (isTesting) {
-                         totalKata++;
-                         new Thread(() -> {
-                             try {
-                                 if (!webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty()) {
 
-                                     String currentHashLocal = calculateSHA256(webAppInterface.ImgBase64);
-									 lastBase64HashLocal = preferences.getString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal);
-                                     // Cek apakah hash sudah ada
-                                     if (currentHashLocal.equals(lastBase64HashLocal)) {
-                                         runOnUiThread(() -> {
-                                             super.dispatchKeyEvent(event);
-                                             updateConsoleLog("Data sudah ada, tidak perlu menyimpan ulang");
-                                             if (pageTitle2.contains(title_earning)) {
-                                                new Handler().postDelayed(() -> performAutoClick(), 200);
-                                             }
-                                         });
-                                         return;
-                                     }
-
-                                     // Simpan hash baru ke SharedPreferences
-                                     SharedPreferences.Editor editor = preferences.edit();
-                                     editor.putString(LAST_BASE64_HASH_KEY_LOCAL, currentHashLocal);
-                                     editor.apply();
-                                     saveBase64Image(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
-                                     //Thread.sleep(30);
-                                     runOnUiThread(() -> {
-                                        super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                                        if (pageTitle2.contains(title_earning)) {
-                                            new Handler().postDelayed(() -> performAutoClick(), 200);
-                                         }
-                                    });
-                                     //return;
-                                 } else {
-                                     runOnUiThread(() -> {
-                                         updateConsoleLog("Gambar tidak ditemukan");
-                                     });
-                                 }
-                             } catch (Exception e) {
-                                 e.printStackTrace();
-                                 updateConsoleLog("Exception: " + e.getMessage());
-                             }
-                         }).start();
-                     } else {
-                         super.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                         if (pageTitle2.contains(title_earning)) {
-                            new Handler().postDelayed(() -> performAutoClick(), 200);
-                         }
-                         return true;
-                     }
-
-                 }
+            if (pageTitle1.contains("Employees Area")){
+                if ((event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7)){
+                    if (getUrl1.startsWith("https://kolotibablo.com/workers/entrance/login")){
+                        webViewTab1.evaluateJavascript(webAppInterface.autoInputLogin, null);
+                        updateConsoleLog("Script Injected. [CTRL+NUM-7]");
+                        return true;
+                    }
+                }
             }
 
         }// end kolotibablo.com
 
+        if (event.getAction() == KeyEvent.ACTION_DOWN && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_SUBTRACT) {
+            String suggestedLabel = matchCaptchaImage(webAppInterface.ImageCaptcha);
+            if (suggestedLabel != null) {
+                showCaptchaSuggestion(suggestedLabel);
+            }
+            super.dispatchKeyEvent(event);
+            return true;
+        }
 
         return super.dispatchKeyEvent(event);
     }
@@ -1424,19 +1488,29 @@ public class StartWorking extends AppCompatActivity {
 
     private void performAutoClick() {
 
-        if (toggleClick) {
-            // AutoClick untuk pointerRight
-            //webViewTab1.clearFocus();
-            viewGecko.requestFocus(); // Root view batas pointerRight
-            simulateTouch(viewGecko, lastX_right, lastY_right);
-            toggleClick = false;
-        } else {
-            // AutoClick untuk pointerLeft
-            //viewGecko.clearFocus();
-            webViewTab1.requestFocus(); // Root view batas pointerLeft
-            simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
-            toggleClick = true;
-        }
+        if (pageTitle1.contains(title_earning)&&pageTitle2.contains(title_earning)){
+			if (toggleClick) {
+				// AutoClick untuk pointerRight
+				//webViewTab1.clearFocus();
+				viewGecko.requestFocus(); // Root view batas pointerRight
+				simulateTouch(viewGecko, lastX_right, lastY_right);
+				toggleClick = false;
+			} else {
+				// AutoClick untuk pointerLeft
+				//viewGecko.clearFocus();
+				webViewTab1.requestFocus(); // Root view batas pointerLeft
+				simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
+				toggleClick = true;
+			}
+		} else if (pageTitle1.contains(title_earning)){
+			webViewTab1.requestFocus(); // Root view batas pointerLeft
+			simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
+			toggleClick = true;
+		} else if (pageTitle2.contains(title_earning)){
+			viewGecko.requestFocus(); // Root view batas pointerRight
+			simulateTouch(viewGecko, lastX_right, lastY_right);
+			toggleClick = false;
+		}
     }
 
     private void simulateTouch(View rootView, float x, float y) {
@@ -1857,9 +1931,9 @@ public class StartWorking extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                if (url.contains("kolotibablo.com")) {
-                    view.evaluateJavascript(webAppInterface.scriptInjectData, null);
-					updateConsoleLog("Script Injected | " + title_earning);
+                if (getUrl1.contains("kolotibablo.com")&&
+                    pageTitle1.contains("Employees Area")) {
+                    view.evaluateJavascript(webAppInterface.autoInputLogin, null);
                 }
 
             }
@@ -1979,6 +2053,7 @@ public class StartWorking extends AppCompatActivity {
                 // Simpan judul dalam string
                 pageTitle1 = title;
                 titleTab1.setText(pageTitle1);
+                
 
 
 
@@ -2008,7 +2083,7 @@ public class StartWorking extends AppCompatActivity {
         });
     }
 
-    private void updateConsoleLog(final String message) {
+    public void updateConsoleLog(final String message) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -2077,6 +2152,7 @@ public class StartWorking extends AppCompatActivity {
             editor.putString("titleKB", titleKB);
             editor.apply();
             title_earning = titleKB;
+            webAppInterface.updateTitleEarning(title_earning);
             // Debugging log
             Log.d("titleKB", "Saved " + " : " + titleKB);
             Toast.makeText(this, "Title saved successfully", Toast.LENGTH_SHORT).show();
@@ -2091,6 +2167,7 @@ public class StartWorking extends AppCompatActivity {
         SharedPreferences sharedPreferences = getSharedPreferences("titleKB", MODE_PRIVATE);
         title_earning = sharedPreferences.getString("titleKB", titleKB);
         editTextTitleKB.setText(title_earning);
+        webAppInterface.updateTitleEarning(title_earning);
         // Debugging log
         Log.d("titleKB", "Loaded " + " : " + titleKB);
 

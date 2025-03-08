@@ -3,6 +3,8 @@ plugins {
 }
 
 ext {
+    sqlite_version = "2.4.0"
+
     geckoviewChannel = "geckoview"
     geckoviewVersion = "135.0.20250216192613" //Dec 2024 "133.0.20241202233018"
 }
@@ -18,7 +20,7 @@ android {
         minSdk 21
         targetSdk 35
         versionCode 9
-        versionName "Edelweiss 9.6.6"
+        versionName "Edelweiss 9.8.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -70,7 +72,9 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
-	
+
+    implementation "androidx.sqlite:sqlite:${sqlite_version}"
+
 	implementation 'com.squareup.okhttp3:okhttp:4.9.3'
 	
     implementation 'com.google.code.gson:gson:2.8.9'

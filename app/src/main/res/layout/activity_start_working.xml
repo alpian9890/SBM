@@ -137,6 +137,18 @@
         android:src="@drawable/baseline_settings_24"
         android:contentDescription="Control"
         android:backgroundTint="@color/lavender" />
+		
+	<com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:visibility="gone"
+        android:id="@+id/fabEnter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:layout_centerInParent="true"
+		android:layout_above="@+id/fab_control"
+        android:src="@drawable/ic_colab"
+        android:contentDescription="Submit"
+        android:backgroundTint="@color/yellow" />
 
     <RelativeLayout
         android:visibility="gone"
