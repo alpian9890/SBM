@@ -95,6 +95,9 @@ import okhttp3.Response;
 
 public class StartWorking extends AppCompatActivity {
 
+    public static final int FOCUS_NONE = 0;
+    public static final int FOCUS_WEBVIEW = 1;
+    public static final int FOCUS_GECKOVIEW = 2;
     private static final int STORAGE_PERMISSION_CODE = 101;
     private static final int REQUEST_CODE_102 = 102;
     String KBEarn = "https://kolotibablo.com";
@@ -165,6 +168,7 @@ public class StartWorking extends AppCompatActivity {
     public boolean isScrapingEnabled() {
         return scrapingEnabled;
     }
+    LogView logView;
     private boolean consoleEnabled = false;
 	private boolean isLogCopied = false;
 
@@ -193,6 +197,15 @@ public class StartWorking extends AppCompatActivity {
     private String csvPath = ""; // basePath + "/labels.csv";
 
     WebAppInterface webAppInterface;
+    public boolean imageDataAvailable() {
+        return !webAppInterface.ImgBase64.isEmpty() && !webAppInterface.ImgLabel.isEmpty();
+    }
+    public String isLabelExist() {
+        return matchCaptchaImage(webAppInterface.ImgBase64);
+    }
+    public void saveCaptchaDataset() {
+        saveBase64ImageToDb(webAppInterface.ImgBase64, webAppInterface.ImgLabel);
+    }
 
     private CaptchaDataManager captchaDataManager;
 
@@ -211,6 +224,7 @@ public class StartWorking extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_start_working);
 
+        logView = findViewById(R.id.logView);
         // Inisialisasi SharedPreferences
         preferences = getSharedPreferences(APP_PREFERENCES, MODE_PRIVATE);
     
@@ -236,12 +250,11 @@ public class StartWorking extends AppCompatActivity {
         
         TextView copyLog = findViewById(R.id.copyLog);
         copyLog.setOnClickListener(v -> {
-            TextView consoleLogText = findViewById(R.id.consoleLogText);
+            // TextView consoleLogText = findViewById(R.id.consoleLogText);
             if (!isLogCopied){
-				if (consoleLogText != null && consoleLogText.getText() != null) {
-					String text = consoleLogText.getText().toString();
-					if (!text.isEmpty()) {
-						copyToClipboard(text);
+				if (logView != null && logView.getLogContent() != null) {
+					if (!logView.getLogContent().isEmpty()) {
+						copyToClipboard(logView.getLogContent());
 						isLogCopied = true;
 						copyLog.setText("Copied");
 						new Handler().postDelayed(() -> {
@@ -255,8 +268,9 @@ public class StartWorking extends AppCompatActivity {
 		
 		TextView clearLog = findViewById(R.id.clearLog);
 		clearLog.setOnClickListener(v -> {
-			TextView consoleLog = findViewById(R.id.consoleLogText);
-            consoleLog.setText("");
+			/*TextView consoleLog = findViewById(R.id.consoleLogText);
+            consoleLog.setText("");*/
+            logView.clear();
 		});
 		
 
@@ -270,8 +284,8 @@ public class StartWorking extends AppCompatActivity {
 		});
         TextView saveData = findViewById(R.id.saveData);
         saveData.setOnClickListener(v -> {
-
-
+            if (logView != null) logView.saveToFile();
+            /*
             new Thread(() -> {
                 try {
                     if (getUrl1.contains("kolotibablo.com") && pageTitle1.contains(title_earning)) {
@@ -312,6 +326,7 @@ public class StartWorking extends AppCompatActivity {
                     Thread.currentThread().interrupt();
                 }
             }).start();
+            */
         });
 
         pBarTab1 = findViewById(R.id.pBarTab1);
@@ -356,8 +371,8 @@ public class StartWorking extends AppCompatActivity {
 		
 		closeConsoleLog.setOnClickListener(v -> {
             RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
-			TextView consoleLog = findViewById(R.id.consoleLogText);
-            consoleLog.setText("");
+            logView.clear();
+            logView.disableLogging();
 			consoleContainer.setVisibility(View.GONE);
 			switchBtnConsole.setChecked(false);
 			consoleEnabled = false;
@@ -388,6 +403,11 @@ public class StartWorking extends AppCompatActivity {
 		switchBtnConsole.setOnCheckedChangeListener((buttonView, isChecked) -> {
             RelativeLayout consoleContainer = findViewById(R.id.consoleContainer);
             consoleContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            if (isChecked) {
+                logView.enableLogging();
+            } else {
+                logView.disableLogging();
+            }
             consoleEnabled = isChecked;
         });
 
@@ -634,10 +654,74 @@ public class StartWorking extends AppCompatActivity {
             checkLastHashFromServer();
 
         });
-
-
+		
+		/*
+        webViewTab1.setOnFocusChangeListener((v, hasFocus) -> {
+			if (hasFocus) {
+				 updateConsoleLog("A WebView hasFocus = " + hasFocus);
+			} else {
+				 updateConsoleLog("B WebView !hasFocus = " + hasFocus);
+			}
+        });
+        viewGecko.setOnFocusChangeListener((v, hasFocus) -> {
+		   if (hasFocus) {
+				 updateConsoleLog("A GeckoView hasFocus = " + hasFocus);
+			} else {
+				 updateConsoleLog("B GeckoView !hasFocus = " + hasFocus);
+			}
+        }); */
 
     }// akhir onCreate
+
+    public void actionWhoIsFocused() {
+        int focusState = whoIsFocus();
+
+        switch (focusState) {
+            case FOCUS_WEBVIEW:
+                Log.d("FocusCheck", "WebView sedang fokus");
+                if (pageTitle1.contains(title_earning)&&pageTitle2.contains(title_earning)){
+                    if (toggleClick) {
+                        // AutoClick untuk pointerRight
+                        //webViewTab1.clearFocus();
+                        viewGecko.requestFocus(); // Root view batas pointerRight
+                        simulateTouch(viewGecko, lastX_right, lastY_right);
+                        toggleClick = false;
+                    } else {
+                        // AutoClick untuk pointerLeft
+                        //viewGecko.clearFocus();
+                        webViewTab1.requestFocus(); // Root view batas pointerLeft
+                        simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
+                        toggleClick = true;
+                    }
+                }
+                break;
+
+            case FOCUS_GECKOVIEW:
+                // Kode yang dijalankan jika GeckoView mendapatkan fokus
+                Log.d("FocusCheck", "GeckoView sedang fokus");
+                break;
+
+            case FOCUS_NONE:
+                // Kode yang dijalankan jika tidak ada yang mendapatkan fokus
+                Log.d("FocusCheck", "Tidak ada view yang fokus");
+                break;
+        }
+    }
+
+    public int whoIsFocus() {
+        // Cek apakah webViewTab1 mendapatkan fokus
+        if (webViewTab1 != null && webViewTab1.isFocused()) {
+            return FOCUS_WEBVIEW;
+        }
+
+        // Cek apakah viewGecko mendapatkan fokus
+        if (viewGecko != null && viewGecko.isFocused()) {
+            return FOCUS_GECKOVIEW;
+        }
+
+        // Jika tidak ada yang mendapatkan fokus
+        return FOCUS_NONE;
+    }
 
     // Method untuk menghitung hash SHA-256
     private String calculateSHA256(String data) {
@@ -1321,7 +1405,7 @@ public class StartWorking extends AppCompatActivity {
 
         if (getUrl1.contains("kolotibablo.com") || getUrl2.contains("kolotibablo.com")){
 
-            if (pageTitle1.contains(title_earning) && pageTitle2.contains(title_earning)) {
+            if (pageTitle1.equals(title_earning) && pageTitle2.equals(title_earning)) {
 
                 if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP) {
                     // Tangani tombol ENTER dengan ACTION_UP
@@ -1379,7 +1463,25 @@ public class StartWorking extends AppCompatActivity {
                     return true;
                 }
 
-            }// End page title kb
+            }  else if (pageTitle1.equals(title_earning)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_7) {
+                    webViewTab1.requestFocus(); // Root view batas pointerLeft
+                    simulateTouch(webViewTab1, lastX_left, lastY_left);
+                    toggleClick = true;
+                    return true;
+                }
+            } else if (pageTitle2.equals(title_earning)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN &&
+                        event.isCtrlPressed() && event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_9) {
+                    viewGecko.requestFocus(); // Root view batas pointerRight
+                    simulateTouch(viewGecko, lastX_right, lastY_right);
+                    toggleClick = false;
+                    return true;
+                }
+            } 
+			
+			// End page title kb
 
             if (pageTitle1.contains("Employees Area")){
                 if ((event.getAction() == KeyEvent.ACTION_DOWN &&
@@ -1390,6 +1492,8 @@ public class StartWorking extends AppCompatActivity {
                         return true;
                     }
                 }
+            } else if (pageTitle2.contains("Employees Area")) {
+
             }
 
         }// end kolotibablo.com
@@ -1488,7 +1592,7 @@ public class StartWorking extends AppCompatActivity {
 
     private void performAutoClick() {
 
-        if (pageTitle1.contains(title_earning)&&pageTitle2.contains(title_earning)){
+        if (pageTitle1.equals(title_earning)&&pageTitle2.equals(title_earning)){
 			if (toggleClick) {
 				// AutoClick untuk pointerRight
 				//webViewTab1.clearFocus();
@@ -1502,11 +1606,11 @@ public class StartWorking extends AppCompatActivity {
 				simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
 				toggleClick = true;
 			}
-		} else if (pageTitle1.contains(title_earning)){
+		} else if (pageTitle1.equals(title_earning)){
 			webViewTab1.requestFocus(); // Root view batas pointerLeft
 			simulateDoubleClick(webViewTab1, lastX_left, lastY_left);
 			toggleClick = true;
-		} else if (pageTitle2.contains(title_earning)){
+		} else if (pageTitle2.equals(title_earning)){
 			viewGecko.requestFocus(); // Root view batas pointerRight
 			simulateTouch(viewGecko, lastX_right, lastY_right);
 			toggleClick = false;
@@ -2088,48 +2192,17 @@ public class StartWorking extends AppCompatActivity {
             @Override
             public void run() {
                 // Tambahkan log baru ke TextView
-                TextView consoleLog = findViewById(R.id.consoleLogText);
-                String currentText = consoleLog.getText().toString();
 
                 if (consoleEnabled==true) {
-                    consoleLog.setText(currentText + "\n" + message);
-					autoScrollLog();
+                    logView.log(message);
                 } else {
-                    consoleLog.setText("...Console log...");
+                    logView.clear();
                 }
 
             }
         });
     }
 
-    private void autoScrollLog() {
-        // Scroll otomatis ke bawah agar log terbaru terlihat
-        ScrollView scrollView = findViewById(R.id.consoleLogScroll);
-        // Tambahkan log baru ke TextView
-        TextView consoleLog = findViewById(R.id.consoleLogText);
-
-        consoleLog.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // Tidak perlu melakukan apa pun di sini
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Tidak perlu melakukan apa pun di sini
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                scrollView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        scrollView.fullScroll(View.FOCUS_DOWN);
-                    }
-                });
-            }
-        });
-    }
     private TextWatcher watchTitleEarning = new TextWatcher() {
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {}

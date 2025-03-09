@@ -8,13 +8,13 @@ import java.lang.ref.WeakReference;
 
 public class WebAppInterface {
 
-    private WeakReference<StartWorking> activityRef;
+    private WeakReference<StartWorking> startWorkingWeakReference;
 
     private Context mContext;
 
     // Constructor baru untuk StartWorking
     public WebAppInterface(StartWorking activity) {
-        this.activityRef = new WeakReference<>(activity);
+        this.startWorkingWeakReference = new WeakReference<>(activity);
         Log.i("WebAppInterface", "WebAppInterface Initialized");
     }
 	// Constructor lama untuk backward compatibility jika diperlukan
@@ -405,13 +405,15 @@ if (typeof window.detectElementChangesCleanup === 'function') {
         if (captcha) {
             if (!state.captcha) {
                 state.captcha = true;
-                console.log('Captcha [ VISIBLE ]');
+                console.log('[ New Captcha found ]');
             }
             try {
                 const bgImage = window.getComputedStyle(captcha).backgroundImage;
                 if (bgImage && bgImage !== 'none') {
-                    lastCaptchaUrl = bgImage.replace(/^url\\(['"]?/, '').replace(/['"]?\\)$/, '');
-                    AndroidInterface.newCaptchaFound(lastCaptchaUrl);
+                    const newCaptchaUrl = bgImage.replace(/^url\\(['"]?/, '').replace(/['"]?\\)$/, '');
+                    AndroidInterface.newCaptchaFound(newCaptchaUrl);
+                    lastCaptchaUrl = newCaptchaUrl;
+                    console.log('Captcha [ VISIBLE ]');
                 }
             } catch (e) {
                 console.log('Mutation failure', e.getMessage);
@@ -450,7 +452,7 @@ if (typeof window.detectElementChangesCleanup === 'function') {
             AndroidInterface.onCaptchaCaptured(lastCaptchaUrl);
             console.log('Captcha URL captured');
             AndroidInterface.onInputCaptured(value);
-            console.log('Enter pressed, input value: ', value);
+            console.log('Input label: ', value);
 
             const workArea = document.querySelector('.work-area-wrap');
             if (workArea) {
@@ -1248,6 +1250,18 @@ function findSubmitButton() {
     public String ImgBase64 = "";
     public String ImgLabel = "";
     public String mutationFailure = "";
+
+    private boolean imageDataAvailable() {
+        return !this.ImgBase64.isEmpty() && !this.ImgLabel.isEmpty();
+    }
+    private String isLabelExist() {
+        StartWorking startWorking = startWorkingWeakReference.get(); // Ambil referensi Activity
+        return startWorking.matchCaptchaImage(this.ImgBase64);
+    }
+    private void saveCaptchaDataset() {
+        StartWorking startWorking = startWorkingWeakReference.get(); // Ambil referensi Activity
+        startWorking.saveBase64ImageToDb(this.ImgBase64, this.ImgLabel);
+    }
     
     @JavascriptInterface
     public void elementFound(String className) {
@@ -1288,30 +1302,29 @@ function findSubmitButton() {
 
     @JavascriptInterface
     public void onButtonSubmitted(String submitted) {
+        StartWorking startWorking = startWorkingWeakReference.get(); // Ambil referensi Activity
         if (submitted.equals("816aef8d8880e9681c755a8597634c3a4f568af30ce1b71d6216d807c8b88953")) {
-            StartWorking activity = activityRef.get(); // Ambil referensi Activity
-            if (activity == null) {
+            if (startWorking == null) {
                 Log.w("WebAppInterface","Activity StartWorking sudah dihancurkan"); // Gunakan metode dari StartWorking
                 return;
             }// Jika Activity sudah dihancurkan, keluar
-
-            if (activity.isScrapingEnabled()){
+			//startWorking.updateConsoleLog("Test public method StartWorking");
+            if (startWorking.isScrapingEnabled()){
                 new Thread(() -> {
                     try {
-                        if (!ImgBase64.isEmpty() && ImgLabel.isEmpty()) {
-                            String existingLabel = activity.matchCaptchaImage(ImgBase64); // Gunakan metode dari StartWorking
-                            if (existingLabel != null) {
-                                activity.updateConsoleLog("Already have this Image: " + existingLabel);
+                        if (imageDataAvailable()) {
+                            if (isLabelExist() != null) {
+                                startWorking.updateConsoleLog("Already have this Image: " + startWorking.isLabelExist());
                             } else {
-                                activity.saveBase64ImageToDb(ImgBase64, ImgLabel); // Gunakan metode dari StartWorking
+                                saveCaptchaDataset();// Gunakan metode dari StartWorking
                             }
                         } else {
-                            activity.updateConsoleLog("Gambar tidak ditemukan"); // Gunakan metode dari StartWorking
+                            startWorking.updateConsoleLog("Gambar tidak ditemukan"); // Gunakan metode dari StartWorking
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
-                        if (activity != null) {
-                            activity.updateConsoleLog("Exception: " + e.getMessage()); // Gunakan metode dari StartWorking
+                        if (startWorking != null) {
+                            startWorking.updateConsoleLog("Exception: " + e.getMessage()); // Gunakan metode dari StartWorking
                         }
                     }
                 }).start();

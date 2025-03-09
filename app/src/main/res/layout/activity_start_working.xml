@@ -188,7 +188,7 @@
                 android:paddingVertical="5.5dp"
                 android:paddingHorizontal="5.5dp"
                 android:background="@drawable/black_lavender"
-                android:text=" Upload "
+                android:text=" Savelog "
                 android:textColor="@color/light_blue_A400"
                 android:textSize="11sp"/>
 
