@@ -67,7 +67,13 @@ public class LogView extends LinearLayout {
 
         // Create log display
         scrollView = new ScrollView(context);
+        scrollView.setFocusable(false);
+        scrollView.setFocusableInTouchMode(false);
+
         logTextView = new TextView(context);
+        logTextView.setFocusable(false);
+        logTextView.setFocusableInTouchMode(false);
+        
         logTextView.setTypeface(Typeface.MONOSPACE);
         logTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         logTextView.setTextColor(Color.WHITE);
