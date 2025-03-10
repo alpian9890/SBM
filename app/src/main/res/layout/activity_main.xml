@@ -29,16 +29,22 @@
 
                 <!-- toolbar lauout -->
                 <include layout="@layout/toolbar_layout" />
+
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@color/lavender">
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center|top"
-                        android:text="The Awesome Sliding Up Panel"
-                        android:textSize="16sp" />
+
+                        <FrameLayout
+                            android:id="@+id/fragmentContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+                            <include layout="@layout/captcha_viewer_db" />
+
+                        </FrameLayout>
+
                 </FrameLayout>
             </LinearLayout>
 

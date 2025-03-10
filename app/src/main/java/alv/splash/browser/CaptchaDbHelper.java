@@ -11,21 +11,20 @@ public class CaptchaDbHelper extends SQLiteOpenHelper {
     // Table and columns
     public static final String TABLE_CAPTCHAS = "captchas";
     public static final String COLUMN_ID = "_id";
-    public static final String COLUMN_IMAGE_HASH = "image_hash";
+    public static final String COLUMN_IMAGE_PATH = "image_path"; // Berubah menjadi path
     public static final String COLUMN_LABEL = "label";
-    public static final String COLUMN_IMAGE_DATA = "image_data";
     public static final String COLUMN_TIMESTAMP = "timestamp";
 
     private static final String SQL_CREATE_CAPTCHAS_TABLE =
             "CREATE TABLE " + TABLE_CAPTCHAS + " (" +
                     COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    COLUMN_IMAGE_HASH + " TEXT NOT NULL UNIQUE, " +
+                    COLUMN_IMAGE_PATH + " TEXT NOT NULL UNIQUE, " +
                     COLUMN_LABEL + " TEXT NOT NULL, " +
-                    COLUMN_IMAGE_DATA + " TEXT NOT NULL, " +
                     COLUMN_TIMESTAMP + " TIMESTAMP DEFAULT CURRENT_TIMESTAMP);";
 
-    public CaptchaDbHelper(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    // Custom database path
+    public CaptchaDbHelper(Context context, String databasePath) {
+        super(context, databasePath + "/" + DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     @Override

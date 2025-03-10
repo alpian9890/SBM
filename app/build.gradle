@@ -19,8 +19,8 @@ android {
         applicationId "alv.splash.browser"
         minSdk 21
         targetSdk 35
-        versionCode 9
-        versionName "Edelweiss 9.9.6"
+        versionCode 10
+        versionName "Edelweiss 10.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -74,7 +74,7 @@ dependencies {
     androidTestImplementation libs.espresso.core
 
     implementation "androidx.sqlite:sqlite:${sqlite_version}"
-
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
 	implementation 'com.squareup.okhttp3:okhttp:4.9.3'
 	
     implementation 'com.google.code.gson:gson:2.8.9'

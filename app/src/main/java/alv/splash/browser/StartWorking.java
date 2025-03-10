@@ -985,7 +985,7 @@ public class StartWorking extends AppCompatActivity {
                 String imagesPath = getExternalFilesDir("Datasets").getPath() + "/images";
                 String csvPath = getExternalFilesDir("Datasets").getPath() + "/labels.csv";
 
-                captchaDataManager.importFromFileSystem(imagesPath, csvPath);
+               // captchaDataManager.importFromFileSystem(imagesPath, csvPath);
 
                 runOnUiThread(() -> {
                     updateConsoleLog("[ Migration completed successfully ]");
@@ -1003,10 +1003,10 @@ public class StartWorking extends AppCompatActivity {
      * Match a CAPTCHA image with database and return label if found
      */
     public String matchCaptchaImage(String base64Data) {
-        Log.d("CaptchaMatch", "matchCaptchaImage() called");
+        Log.d("CaptchaMatch", "matchCaptchaImage() dipanggil");
 
         if (base64Data == null || base64Data.isEmpty()) {
-            Log.e("CaptchaMatch", "Base64 data is empty");
+            Log.e("CaptchaMatch", "Data Base64 kosong");
             return null;
         }
 
@@ -1015,21 +1015,21 @@ public class StartWorking extends AppCompatActivity {
                 captchaDataManager = new CaptchaDataManager(this);
             }
 
-            // Get matching label
+            // Dapatkan label yang cocok
             String label = captchaDataManager.getLabelForImage(base64Data);
 
             if (label != null) {
-                Log.d("CaptchaMatch", "Found matching CAPTCHA: " + label);
-                updateConsoleLog("[ Match found: " + label + " ]");
+                Log.d("CaptchaMatch", "Ditemukan CAPTCHA yang cocok: " + label);
+                updateConsoleLog("[ Ditemukan kecocokan: " + label + " ]");
                 return label;
             } else {
-                Log.d("CaptchaMatch", "No match found");
-                updateConsoleLog("[ No match found ]");
+                Log.d("CaptchaMatch", "Tidak ditemukan kecocokan");
+                updateConsoleLog("[ Tidak ditemukan kecocokan ]");
                 return null;
             }
         } catch (Exception e) {
-            Log.e("CaptchaMatch", "Error matching: " + e.getMessage(), e);
-            updateConsoleLog("[!] Matching error: " + e.getMessage());
+            Log.e("CaptchaMatch", "Error mencocokkan: " + e.getMessage(), e);
+            updateConsoleLog("[!] Error mencocokkan: " + e.getMessage());
             return null;
         }
     }
@@ -1057,47 +1057,42 @@ public class StartWorking extends AppCompatActivity {
     }
 
     public void saveBase64ImageToDb(String base64Data, String label) {
-        Log.d("StorageDebug", "saveBase64ImageToDb() called");
+        Log.d("StorageDebug", "saveBase64ImageToDb() dipanggil");
 
         if (!storagePermission) {
-            Log.e("StorageDebug", "Storage permission not granted");
-            updateConsoleLog("[!] Error: Storage permission not granted");
+            Log.e("StorageDebug", "Izin penyimpanan tidak diberikan");
+            updateConsoleLog("[!] Error: Izin penyimpanan tidak diberikan");
             requestStoragePermissions();
             return;
         }
 
         try {
             if (base64Data == null || base64Data.isEmpty()) {
-                Log.e("StorageDebug", "Base64 data is empty");
-                updateConsoleLog("[!] Error: Base64 data is empty");
+                Log.e("StorageDebug", "Data Base64 kosong");
+                updateConsoleLog("[!] Error: Data Base64 kosong");
                 return;
             }
 
-            // Debug info
+            // Info debug
             updateConsoleLog("Base64 length: 👇\n" + base64Data.length() + " startWith: " +
                     base64Data.substring(0, Math.min(21, base64Data.length())));
 
-            // Initialize manager if needed
+            // Inisialisasi manager jika diperlukan
             if (captchaDataManager == null) {
                 captchaDataManager = new CaptchaDataManager(this);
             }
 
-            // Save to SQLite
+            // Simpan ke SQLite dan sistem file
             boolean saved = captchaDataManager.saveCaptchaData(base64Data, label);
 
             if (saved) {
-                String newHash = calculateSHA256(base64Data);
-                lastBase64HashLocal = newHash;
-                preferences.edit().putString(LAST_BASE64_HASH_KEY_LOCAL, lastBase64HashLocal).apply();
-
-                updateConsoleLog("Last Base64 Hash Local: " + lastBase64HashLocal);
-                updateConsoleLog("[ Image successfully saved to database ]");
+                updateConsoleLog("[ Gambar berhasil disimpan ke database dan sistem file ]");
             } else {
-                updateConsoleLog("[!] Image already exists in database or error occurred");
+                updateConsoleLog("[!] Gambar sudah ada di database atau terjadi error");
             }
         } catch (Exception e) {
-            Log.e("StorageDebug", "Unexpected error: " + e.getMessage(), e);
-            updateConsoleLog("[!] Unexpected error: " + e.getMessage());
+            Log.e("StorageDebug", "Error tidak terduga: " + e.getMessage(), e);
+            updateConsoleLog("[!] Error tidak terduga: " + e.getMessage());
         }
     }
 
