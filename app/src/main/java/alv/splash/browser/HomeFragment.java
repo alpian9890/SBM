@@ -98,6 +98,7 @@ public class HomeFragment extends Fragment {
         List<SpeedDialItem> items = loadItems();
         adapter = new SpeedDialAdapter(items, this::showAddItemBottomSheet);
 
+        adapter.setOnItemClickListener(item -> openUrl(item.getUrl()));
         // Menetapkan listener untuk event tekan lama
         adapter.setOnItemLongClickListener(this::showEditItemBottomSheet);
 
@@ -207,6 +208,12 @@ public class HomeFragment extends Fragment {
 
         bottomSheetDialog.setContentView(bottomSheetEdit);
         bottomSheetDialog.show();
+    }
+
+    private void openUrl(String url) {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).loadUrl(url);
+        }
     }
 
 }

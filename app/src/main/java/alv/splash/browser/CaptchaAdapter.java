@@ -1,5 +1,6 @@
 package alv.splash.browser;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,10 +10,10 @@ import java.util.List;
 
 public class CaptchaAdapter extends RecyclerView.Adapter<CaptchaViewHolder> {
     private List<CaptchaDataManager.CaptchaEntry> entries;
-    private MainActivity activity;
+    private CaptchaViewerFragment fragment;
 
-    public CaptchaAdapter(MainActivity activity, List<CaptchaDataManager.CaptchaEntry> entries) {
-        this.activity = activity;
+    public CaptchaAdapter(CaptchaViewerFragment fragment, List<CaptchaDataManager.CaptchaEntry> entries) {
+        this.fragment = fragment;
         this.entries = entries;
     }
 
@@ -21,7 +22,7 @@ public class CaptchaAdapter extends RecyclerView.Adapter<CaptchaViewHolder> {
     public CaptchaViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_captcha, parent, false);
-        return new CaptchaViewHolder(activity, view);
+        return new CaptchaViewHolder(fragment, view);
     }
 
     @Override

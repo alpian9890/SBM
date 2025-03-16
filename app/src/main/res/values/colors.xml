@@ -17,4 +17,7 @@
     <color name="green">#FF00FF00</color>
     <color name="teal_blue">#FF54FFFD</color>
     <color name="yellow">#FFFF00</color>
+    <color name="heading">#DEDEFA</color>
+    <color name="accent_heading">#FF2E7E</color>
+    <color name="secondary_text">#9090A7</color>
 </resources>

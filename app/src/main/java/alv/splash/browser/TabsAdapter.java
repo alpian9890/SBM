@@ -1,0 +1,100 @@
+package alv.splash.browser;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.List;
+
+public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.TabViewHolder> {
+    private List<TabItem> tabs;
+    private OnTabClickListener listener;
+
+    public interface OnTabClickListener {
+        void onTabClick(TabItem tab);
+        void onTabClose(TabItem tab);
+    }
+
+    public TabsAdapter(List<TabItem> tabs, OnTabClickListener listener) {
+        this.tabs = tabs;
+        this.listener = listener;
+    }
+
+    @NonNull
+    @Override
+    public TabViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_tab, parent, false);
+        return new TabViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull TabViewHolder holder, int position) {
+        TabItem tab = tabs.get(position);
+        holder.bind(tab);
+    }
+
+    @Override
+    public int getItemCount() {
+        return tabs.size();
+    }
+
+    public void updateTabs(List<TabItem> tabs) {
+        this.tabs = tabs;
+        notifyDataSetChanged();
+    }
+
+    class TabViewHolder extends RecyclerView.ViewHolder {
+        private ImageView favicon;
+        private TextView title;
+        private TextView url;
+        private ImageButton closeButton;
+        private CardView tabCard;
+
+        public TabViewHolder(@NonNull View itemView) {
+            super(itemView);
+            favicon = itemView.findViewById(R.id.tab_favicon);
+            title = itemView.findViewById(R.id.tab_title);
+            url = itemView.findViewById(R.id.tab_url);
+            closeButton = itemView.findViewById(R.id.tab_close);
+            tabCard = itemView.findViewById(R.id.tab_card);
+        }
+
+        public void bind(TabItem tab) {
+            title.setText(tab.getTitle());
+            url.setText(tab.getUrl());
+
+            if (tab.getFavicon() != null) {
+                favicon.setImageBitmap(tab.getFavicon());
+            } else {
+                favicon.setImageResource(R.drawable.ic_globe_32); // Default icon
+            }
+
+            // Highlight active tab
+            if (tab.isActive()) {
+                tabCard.setCardBackgroundColor(itemView.getContext().getResources().getColor(R.color.teal_blue));
+            } else {
+                tabCard.setCardBackgroundColor(itemView.getContext().getResources().getColor(R.color.secondary_text));
+            }
+
+            tabCard.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onTabClick(tab);
+                }
+            });
+
+            closeButton.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onTabClose(tab);
+                }
+            });
+        }
+    }
+}

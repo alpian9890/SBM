@@ -28,24 +28,14 @@
                 android:orientation="vertical">
 
                 <!-- toolbar lauout -->
-                <include layout="@layout/toolbar_layout" />
+                <include layout="@layout/address_bar" />
 
                 <FrameLayout
+                    android:id="@+id/fragmentSubContent"
+                    android:layout_marginTop="5dp"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@color/lavender">
+                    android:layout_height="match_parent"/>
 
-                        <FrameLayout
-                            android:id="@+id/fragmentContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-                            <include layout="@layout/captcha_viewer_db" />
-
-                        </FrameLayout>
-
-                </FrameLayout>
             </LinearLayout>
 
         </alv.splash.browser.SlidingUpPanelLayout>
@@ -55,12 +45,9 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:scrollbars="vertical"
-        android:background="@color/black_overlay"
+        android:background="@drawable/cosmic_gradient_bg2"
         android:id="@+id/nav_view"
         android:layout_gravity="start"
-        app:headerLayout="@layout/nav_header"
-        app:menu="@menu/nav_menu"
-        app:itemIconTint="@color/lavender"
-        app:itemTextColor="@color/lavender"/>
+        app:headerLayout="@layout/nav_header"/>
 
 </androidx.drawerlayout.widget.DrawerLayout>

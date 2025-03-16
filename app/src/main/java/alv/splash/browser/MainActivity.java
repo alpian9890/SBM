@@ -1,6 +1,6 @@
 package alv.splash.browser;
 
-import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -9,12 +9,13 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.widget.Button;
@@ -29,13 +30,10 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -45,12 +43,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
-import alv.splash.browser.SlidingUpPanelLayout;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -65,43 +62,29 @@ public class MainActivity extends AppCompatActivity {
     private static final String APP_PREFERENCES = "AppPreferences";
     private static final String STORAGE_PERMISSION_KEY = "storage_permission_granted";
 
-    // Pagination variables
-    private int currentPage = 1;
-    private int itemsPerPage = 50;
-    private int totalPages = 1;
-    private int totalItems = 0;
-    private RecyclerView captchaRecyclerView;
-    private TextView emptyStateText;
-    private TextView textPageIndicator;
-    private TextView textTotalItems, tvShowingItems;
-    private CaptchaAdapter captchaAdapter;
-    private SwipeRefreshLayout swipeRefreshLayoutCDB;
-    private Button buttonPrevPage, buttonNextPage;
-    private Button buttonShowDatabase, buttonShowCaptcha;
     CaptchaDataManager captchaDataManager;
-    ExternalDatabaseManager externalDatabaseManager;
-    private boolean isUsingExternalDatabase = false;
     private String basePath = ""; //Environment.getExternalStorageDirectory() + "/Datasets";
     private String imagesPath = "";// basePath + "/Images";
-
 
     DrawerLayout mainDrawer;
     FrameLayout fMainContainer;
 
-
-    //Toolbar
-    LinearLayout navContainer;
-    ImageView myMenu, myHome, addNewTab;
-
     NavigationView navigationView;
 
     SlidingUpPanelLayout slidingLayout;
+
+    private AddressBarUtils addressBarUtils;
+
+    private TextInputEditText editAddressBar;
+
+    private TabManager tabManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
 
         // Inisialisasi SharedPreferences
         preferences = getSharedPreferences(APP_PREFERENCES, MODE_PRIVATE);
@@ -115,18 +98,11 @@ public class MainActivity extends AppCompatActivity {
         mainDrawer = findViewById(R.id.mainDrawer);
 
         // Toolbar
-        myMenu = findViewById(R.id.myMenu);
-        myHome = findViewById(R.id.myHome);
-
-        initializeCaptchaViewer();
-
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fMainContainer, new HomeFragment()).commit();
-
-        }
-        replaceFragment(new HomeFragment());
+        //myMenu = findViewById(R.id.myMenu);
+        //myHome = findViewById(R.id.myHome);
 
         slidingLayout = findViewById(R.id.sliding_layout);
+        fMainContainer = findViewById(R.id.fMainContainer);
 
         slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
@@ -149,13 +125,44 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+		if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fMainContainer,
+                            new HomeFragment())
+                    .commit();
 
-        myMenu.setOnClickListener(v -> {
-            if (!mainDrawer.isDrawerOpen(GravityCompat.START)) {
-                mainDrawer.openDrawer(GravityCompat.START); // Buka Navigation Drawer di sisi kiri
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentSubContent,
+                            new CaptchaViewerFragment())
+                    .commit();
+        }
+        replaceFragment(new HomeFragment());
+
+        initializeAddressBar();
+        initializeSubToolbar();
+
+        tabManager = TabManager.getInstance();
+        tabManager.addTabChangeListener(new TabManager.TabChangeListener() {
+            @Override
+            public void onTabsChanged() {
+                // Update tabs UI if needed
+            }
+
+            @Override
+            public void onActiveTabChanged(TabItem tab) {
+                if (tab != null) {
+                    showTab(tab);
+                }
             }
         });
 
+        // If no tabs exist, create a home tab
+        if (tabManager.getAllTabs().isEmpty()) {
+            createNewTab("about:home");
+        }
+
+
+        /*
         // Set listener untuk item menu
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
 
@@ -172,31 +179,31 @@ public class MainActivity extends AppCompatActivity {
                 else if (id == R.id.music_player) {
                     // Handle music player
                     String url = "https://music.youtube.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.suno_AI) {
                     String url = "https://suno.ai";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.vidiodotcom) {
                     String url = "https://www.vidio.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.webLK21) {
                     String url = "https://lk21.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.open_AI) {
                     String url = "https://chat.openai.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.googleColab) {
                     String url = "https://colab.google.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.workercashweb) {
                     String url = "https://worker.cash";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.workDuaTab) {
                     // Handle 2 tab work
@@ -205,47 +212,47 @@ public class MainActivity extends AppCompatActivity {
                 // Survey Panel items
                 else if (id == R.id.surveytime) {
                     String url = "https://surveytime.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.ysense) {
                     String url = "https://ysense.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.grabpoints) {
                     String url = "https://grabpoints.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.grapedata) {
                     String url = "https://grapedata.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.primeopinion) {
                     String url = "https://primeopinion.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.opinionworld) {
                     String url = "https://opinionworld.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.lootupsurvey) {
                     String url = "https://lootup.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.surveylama) {
                     String url = "https://surveylama.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.surveyon) {
                     String url = "https://surveyon.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.lifepoints) {
                     String url = "https://lifepoints.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.toluna) {
                     String url = "https://toluna.com";
-                    openWebView(url);
+                    openWebGecko(url);
                 }
                 else if (id == R.id.drawer_logout) {
                     // Handle logout
@@ -256,10 +263,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // Method untuk membuka WebView
-            private void openWebView(String url) {
 
-            }
 
             // Method untuk logout
             private void logout() {
@@ -267,15 +271,287 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
 
-        });
-
-
-
+        });*/
 
 
 
 
     }//akhir onCreate
+
+    @Override
+    public void onBackPressed() {
+        // Check if address bar is expanded
+        if (addressBarUtils.isExpanded()) {
+            addressBarUtils.collapseAddressBar();
+            return;
+        }
+
+        // Check if sliding panel is expanded
+        if (slidingLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
+            slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+            return;
+        }
+
+        // Check if drawer is open
+        if (mainDrawer.isDrawerOpen(GravityCompat.START)) {
+            mainDrawer.closeDrawer(GravityCompat.START);
+            return;
+        }
+
+        // Check if current fragment is GeckoViewFragment and can go back
+        Fragment currentFragment = getSupportFragmentManager()
+                .findFragmentById(R.id.fMainContainer);
+
+        if (currentFragment instanceof GeckoViewFragment && ((GeckoViewFragment) currentFragment).canGoBack()) {
+            ((GeckoViewFragment) currentFragment).goBack();
+            return;
+        }
+
+        // Otherwise, proceed with normal back button behavior
+        super.onBackPressed();
+    }
+
+    public void updateAddressBarInfo(String title, boolean isSecure) {
+        addressBarUtils.updatePageInfo(title, isSecure);
+    }
+    private void openWebGecko(String query) {
+        String processedUrl = new UrlValidator().processInput(query);
+        loadUrl(processedUrl);
+        addressBarUtils.collapseAddressBar();
+    }
+
+    private void initializeAddressBar() {
+        // Initialize components
+
+        ImageButton btnMenu = findViewById(R.id.btnMenu);
+
+        ImageButton btnHome = findViewById(R.id.btnHome);
+
+        ImageButton btnAddTab = findViewById(R.id.btnAddTab);
+
+        ImageButton btnTabs = findViewById(R.id.btnTabs);
+
+
+
+        ImageView iconSecurity = findViewById(R.id.iconSecurity);
+
+        TextView txtPageTitle = findViewById(R.id.txtPageTitle);
+
+        CardView addressBarContainer = findViewById(R.id.addressBarContainer);
+
+        editAddressBar = findViewById(R.id.editAddressBar);
+
+
+
+        // Initialize AddressBarUtils
+
+        addressBarUtils = new AddressBarUtils(addressBarContainer, iconSecurity, txtPageTitle);
+
+
+
+        // Set initial page info
+
+        addressBarUtils.updatePageInfo("Start browsing", true);
+
+        // Setup toggle behavior
+
+        txtPageTitle.setOnClickListener(v -> {
+            addressBarUtils.expandAddressBar();
+            editAddressBar.requestFocus();
+            editAddressBar.selectAll();
+            showKeyboard(editAddressBar);
+        });
+
+
+
+        // Handle address bar keyboard actions
+
+        editAddressBar.setOnEditorActionListener((v, actionId, event) -> {
+
+            if (actionId == EditorInfo.IME_ACTION_GO) {
+
+                openWebGecko(editAddressBar.getText().toString());
+                hideKeyboard(editAddressBar);
+                return true;
+
+            }
+
+            return false;
+
+        });
+
+        editAddressBar.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                hideKeyboard(editAddressBar);
+                addressBarUtils.collapseAddressBar();
+            }
+        });
+
+
+
+        // Setup other buttons
+
+        btnMenu.setOnClickListener(v -> {
+            if (!mainDrawer.isDrawerOpen(GravityCompat.START)) {
+                mainDrawer.openDrawer(GravityCompat.START); // Buka Navigation Drawer di sisi kiri
+            }
+            addressBarUtils.collapseAddressBar();
+        });
+
+
+
+        btnHome.setOnClickListener(v -> {
+
+            // Handle home click
+
+            addressBarUtils.collapseAddressBar();
+
+        });
+
+
+
+        btnAddTab.setOnClickListener(v -> {
+            createNewTab("about:home");
+        });
+
+        btnTabs.setOnClickListener(v -> {
+            loadFragment(new TabsManagementFragment());
+        });
+    }
+
+    private void initializeSubToolbar() {
+        View headerView = navigationView.getHeaderView(0);
+        // Find CardView elements and set click listeners
+        CardView startWorking = headerView.findViewById(R.id.startWorking);
+        CardView cardTabs = headerView.findViewById(R.id.card_tabs);
+        CardView cardHistory = headerView.findViewById(R.id.card_history);
+        CardView cardBookmarks = headerView.findViewById(R.id.card_bookmarks);
+        CardView cardDownloads = headerView.findViewById(R.id.card_downloads);
+        CardView cardExtensions = headerView.findViewById(R.id.card_extensions);
+        CardView cardTranslate = headerView.findViewById(R.id.card_translate);
+        CardView cardNotes = headerView.findViewById(R.id.card_notes);
+        CardView cardDatabase = headerView.findViewById(R.id.card_database);
+        CardView cardFiles = headerView.findViewById(R.id.card_files);
+        CardView cardKeyboard = headerView.findViewById(R.id.card_keyboard);
+        CardView cardCalculator = headerView.findViewById(R.id.card_calculator);
+        CardView cardPhotos = headerView.findViewById(R.id.card_photos);
+        CardView cardVideos = headerView.findViewById(R.id.card_videos);
+        CardView cardMusic = headerView.findViewById(R.id.card_music);
+        CardView cardV2ray = headerView.findViewById(R.id.card_v2ray);
+        CardView cardConsole = headerView.findViewById(R.id.card_console);
+        CardView cardLogout = headerView.findViewById(R.id.card_logout);
+
+        // Set click listeners for each card
+        startWorking.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, StartWorking.class);
+            startActivity(intent);
+            finish();
+        });
+        cardTabs.setOnClickListener(v -> loadFragment(new TabsManagementFragment()));
+        cardHistory.setOnClickListener(v -> loadFragment(new HistoryBrowsingFragment()));
+        cardBookmarks.setOnClickListener(v -> loadFragment(new BookmarksFragment()));
+        cardDownloads.setOnClickListener(v -> loadFragment(new DownloadsFragment()));
+        cardExtensions.setOnClickListener(v -> loadFragment(new ExtensionsFragment()));
+        cardTranslate.setOnClickListener(v -> loadFragment(new TranslateFragment()));
+        cardNotes.setOnClickListener(v -> loadFragment(new NotesFragment()));
+        cardDatabase.setOnClickListener(v -> loadFragment(new CaptchaViewerFragment()));
+        cardFiles.setOnClickListener(v -> loadFragment(new FilesManagerFragment()));
+        cardKeyboard.setOnClickListener(v -> loadFragment(new KeyboardFragment()));
+        cardCalculator.setOnClickListener(v -> loadFragment(new CalculatorFragment()));
+        cardPhotos.setOnClickListener(v -> loadFragment(new PhotosFragment()));
+        cardVideos.setOnClickListener(v -> loadFragment(new VideosFragment()));
+        cardMusic.setOnClickListener(v -> loadFragment(new MusicFragment()));
+        cardV2ray.setOnClickListener(v -> loadFragment(new V2RayFragment()));
+        cardConsole.setOnClickListener(v -> loadFragment(new ConsoleFragment()));
+        cardLogout.setOnClickListener(v -> finish());
+
+    }
+
+    private void loadFragment(Fragment fragment) {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentSubContent, fragment)
+                .commit();
+        closeDrawer();
+        if (slidingLayout.getPanelState() != SlidingUpPanelLayout.PanelState.EXPANDED ||
+                slidingLayout.getPanelState() == SlidingUpPanelLayout.PanelState.COLLAPSED) {
+            slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.EXPANDED);
+        }
+    }
+
+    private void closeDrawer() {
+        if (mainDrawer.isDrawerOpen(GravityCompat.START)) {
+            mainDrawer.closeDrawer(GravityCompat.START);
+        }
+    }
+
+
+    public void showKeyboard(View view) {
+        if (view.requestFocus()) {
+            InputMethodManager imm = (InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            }
+        }
+    }
+    public void hideKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+    public void createNewTab(String url) {
+        TabItem newTab = tabManager.addTab(url);
+        if (url.equals("about:home")) {
+            // Show home page
+            replaceFragment(new HomeFragment());
+            addressBarUtils.updatePageInfo("Start browsing", true);
+        } else {
+            // Show browser page
+            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(newTab.getId(), url);
+            replaceFragment(geckoViewFragment);
+        }
+    }
+
+    public void showTab(TabItem tab) {
+        tabManager.setActiveTab(tab);
+        if (tab.getUrl().equals("about:home")) {
+            replaceFragment(new HomeFragment());
+            addressBarUtils.updatePageInfo("Start browsing", true);
+        } else {
+            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(tab.getId(), tab.getUrl());
+            replaceFragment(geckoViewFragment);
+            addressBarUtils.updatePageInfo(tab.getTitle(), true);
+        }
+
+        // Collapse the sliding panel if it's expanded
+        if (slidingLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
+            slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+        }
+    }
+
+    public void loadUrl(String url) {
+        TabItem activeTab = tabManager.getActiveTab();
+
+        if (activeTab == null) {
+            // If no active tab, create a new one
+            createNewTab(url);
+            return;
+        }
+
+        // Get the current fragment
+        Fragment currentFragment = getSupportFragmentManager()
+                .findFragmentById(R.id.fMainContainer);
+
+        if (currentFragment instanceof GeckoViewFragment) {
+            // If GeckoViewFragment is already showing, just load the URL
+            ((GeckoViewFragment) currentFragment).loadUrl(url);
+        } else {
+            // Otherwise replace with a new GeckoViewFragment
+            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(activeTab.getId(), url);
+            replaceFragment(geckoViewFragment);
+        }
+    }
 
     private void setupStorage() {
         // Log untuk debugging
@@ -305,7 +581,7 @@ public class MainActivity extends AppCompatActivity {
         //Log.d("StorageDebug", "csvPath: " + csvPath);
 
         // Buat direktori jika belum ada
-        createDirectories();
+        //createDirectories();
 
         // Minta izin penyimpanan saat aplikasi dibuka
         requestStoragePermissions();
@@ -438,7 +714,7 @@ public class MainActivity extends AppCompatActivity {
                     editor.apply();
 
                     // Buat direktori setelah izin diberikan
-                    createDirectories();
+                    //createDirectories();
                 } else {
                     //updateConsoleLog("[!] Izin MANAGE_EXTERNAL_STORAGE ditolak");
                     storagePermission = false;
@@ -486,272 +762,16 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
-    private void initializeCaptchaViewer() {
-        captchaDataManager = new CaptchaDataManager(this);
-
-        // Find views
-        captchaRecyclerView = findViewById(R.id.captchaRecyclerView);
-        emptyStateText = findViewById(R.id.emptyStateText);
-        swipeRefreshLayoutCDB = findViewById(R.id.swipeRefreshLayoutCDB);
-        textPageIndicator = findViewById(R.id.textPageIndicator);
-        textTotalItems = findViewById(R.id.textTotalItems);
-        tvShowingItems = findViewById(R.id.tvShowingItems);
-        buttonPrevPage = findViewById(R.id.buttonPrevPage);
-        buttonNextPage = findViewById(R.id.buttonNextPage);
-        buttonShowDatabase = findViewById(R.id.buttonShowDatabase);
-        buttonShowCaptcha = findViewById(R.id.buttonShowCaptcha);
-
-        if (captchaRecyclerView != null) {
-            captchaRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
-
-            // Initialize adapter with empty list
-            captchaAdapter = new CaptchaAdapter(this, new ArrayList<>());
-            captchaRecyclerView.setAdapter(captchaAdapter);
-
-            // Set up pagination controls
-            setupPaginationControls();
-
-            // Set up swipe refresh
-            setupSwipeRefresh();
-
-            // Set up navigation buttons
-            setupNavigationButtons();
-
-            // Load data
-            loadData();
-        }
-    }
-
-    private void setupPaginationControls() {
-        buttonPrevPage.setOnClickListener(v -> {
-            if (currentPage > 1) {
-                currentPage--;
-                loadData();
-            }
-        });
-
-        buttonNextPage.setOnClickListener(v -> {
-            if (currentPage < totalPages) {
-                currentPage++;
-                loadData();
-            }
-        });
-
-        updatePaginationControls();
-    }
-
-    private void updatePaginationControls() {
-        buttonPrevPage.setEnabled(currentPage > 1);
-        buttonNextPage.setEnabled(currentPage < totalPages);
-        textPageIndicator.setText("Page " + currentPage + " of " + totalPages);
-        textTotalItems.setText("Total entries: " + totalItems);
-
-        // Hitung rentang item yang ditampilkan
-        int startItem = (currentPage - 1) * itemsPerPage + 1;
-        int endItem = Math.min(currentPage * itemsPerPage, totalItems);
-
-        // Menangani kasus ketika database kosong
-        if (totalItems == 0) {
-            startItem = 0;
-            endItem = 0;
-        }
-
-        String tvShowingItemsText = " | Showing " + startItem + "-" + endItem + " of " + totalItems;
-        tvShowingItems.setText(tvShowingItemsText);
-    }
-
-    private void setupSwipeRefresh() {
-        swipeRefreshLayoutCDB.setOnRefreshListener(() -> {
-            Toast.makeText(MainActivity.this, "Refreshing data...", Toast.LENGTH_SHORT).show();
-            loadData();
-        });
-
-        // Set refresh indicator colors
-        swipeRefreshLayoutCDB.setColorSchemeResources(
-                R.color.purple_500,
-                R.color.teal_200,
-                R.color.purple_700
-        );
-    }
-
-    private void setupNavigationButtons() {
-        buttonShowDatabase.setOnClickListener(v -> showDatabaseManager());
-        buttonShowCaptcha.setOnClickListener(v -> showCaptchaViewer());
-    }
-
-    public void loadData() {
-        // Show refresh indicator
-        if (swipeRefreshLayoutCDB != null) {
-            swipeRefreshLayoutCDB.setRefreshing(true);
-        }
-
-        // Load data in background
-        new Thread(() -> {
-            // First get total count for pagination
-            int count;
-            if (isUsingExternalDatabase && externalDatabaseManager != null) {
-                count = externalDatabaseManager.getEntryCount();
-            } else {
-                count = captchaDataManager.getEntryCount();
-            }
-
-            totalItems = count;
-            totalPages = (count == 0) ? 1 : (int) Math.ceil((double) count / itemsPerPage);
-
-            // Ensure current page is within bounds
-            if (currentPage > totalPages) {
-                currentPage = totalPages > 0 ? totalPages : 1;
-            }
-
-            // Calculate offset
-            int offset = (currentPage - 1) * itemsPerPage;
-
-            // Get paginated entries
-            List<CaptchaDataManager.CaptchaEntry> entries;
-            if (isUsingExternalDatabase && externalDatabaseManager != null) {
-                entries = externalDatabaseManager.getEntriesWithPagination(offset, itemsPerPage);
-            } else {
-                entries = captchaDataManager.getEntriesWithPagination(offset, itemsPerPage);
-            }
-
-            runOnUiThread(() -> {
-                if (captchaAdapter == null) {
-                    captchaAdapter = new CaptchaAdapter(this, entries);
-                    captchaRecyclerView.setAdapter(captchaAdapter);
-                } else {
-                    captchaAdapter.updateData(entries);
-                }
-
-                // Show empty state if needed
-                if (emptyStateText != null) {
-                    if (totalItems == 0) {
-                        emptyStateText.setVisibility(View.VISIBLE);
-                        captchaRecyclerView.setVisibility(View.GONE);
-                    } else {
-                        emptyStateText.setVisibility(View.GONE);
-                        captchaRecyclerView.setVisibility(View.VISIBLE);
-                    }
-                }
-
-                // Update pagination controls
-                updatePaginationControls();
-
-                // Hide refresh indicator
-                if (swipeRefreshLayoutCDB != null) {
-                    swipeRefreshLayoutCDB.setRefreshing(false);
-                }
-            });
-        }).start();
-    }
-
-    public CaptchaDataManager getCaptchaDataManager() {
-        return isUsingExternalDatabase ? null : captchaDataManager;
-    }
-
-    public ExternalDatabaseManager getExternalDatabaseManager() {
-        return isUsingExternalDatabase ? externalDatabaseManager : null;
-    }
-
-    // Handle external database selection
-    public void onExternalDatabaseSelected(String dbPath) {
-        // Close current connections
-        closeCurrentDatabaseConnections();
-
-        try {
-            externalDatabaseManager = new ExternalDatabaseManager(this, dbPath);
-            isUsingExternalDatabase = true;
-
-            // Update title
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle("CAPTCHA Viewer (External DB)");
-            }
-
-            // Reload data
-            loadData();
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Failed to open external database: " + e.getMessage(),
-                    Toast.LENGTH_LONG).show();
-
-            // Fallback to internal
-            useInternalDatabase();
-        }
-    }
-
-    // Switch back to internal database
-    public void useInternalDatabase() {
-        if (isUsingExternalDatabase) {
-            closeCurrentDatabaseConnections();
-
-            isUsingExternalDatabase = false;
-
-            // Update title
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle("CAPTCHA Database Viewer");
-            }
-
-            // Reload data
-            loadData();
-
-            Toast.makeText(this, "Using internal database", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void closeCurrentDatabaseConnections() {
-        if (externalDatabaseManager != null) {
-            externalDatabaseManager.close();
-            externalDatabaseManager = null;
-        }
-    }
-
-
-    // Menu handling
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
-        return true;
-    }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-
-        if (id == R.id.action_view_captchas) {
-            showCaptchaViewer();
-            return true;
-        } else if (id == R.id.action_database_manager) {
-            showDatabaseManager();
-            return true;
-        } else if (id == R.id.action_refresh) {
-            loadData();
-            Toast.makeText(this, "Refreshing data...", Toast.LENGTH_SHORT).show();
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    public void onResume() {
+        super.onResume();
     }
-
-    private void showCaptchaViewer() {
-        getSupportFragmentManager().popBackStack();
-    }
-
-    private void showDatabaseManager() {
-        Fragment dbManagerFragment = new DatabaseManagerFragment();
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragmentContainer, dbManagerFragment)
-                .addToBackStack(null)
-                .commit();
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (captchaDataManager != null) {
             captchaDataManager.close();
-        }
-        if (externalDatabaseManager != null) {
-            externalDatabaseManager.close();
         }
     }
 

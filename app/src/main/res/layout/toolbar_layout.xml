@@ -44,44 +44,52 @@
             android:orientation="horizontal"
             android:layout_gravity="center_horizontal">
 
-            <!-- Title Address Bar (Default visible) -->
             <LinearLayout
-                android:id="@+id/titleAddressBar"
-                android:layout_weight="1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_weight="1"
                 android:background="@drawable/edittext"
-                android:padding="7dp"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="7dp">
 
-                <!-- PageSecure Icon -->
-                <ImageView
-                    android:id="@+id/pageSecure"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/baseline_auto_awesome_24"
-                    android:layout_marginEnd="8dp"
-                    android:contentDescription="Secure"/>
-
-
-                <!-- TextView for Domain Display -->
-                <TextView
-                    android:id="@+id/addressTextView"
-                    android:layout_weight="1"
-                    android:layout_width="0dp"
+                <!-- Title Address Bar (Default visible) -->
+                <LinearLayout
+                    android:id="@+id/titleAddressBar"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Splash Browser"
-                    android:singleLine="true"
-                    android:ellipsize="end"
-                    android:textSize="16sp"/>
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="visible">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/baseline_refresh_24"
-                    android:id="@+id/refreshPage"/>
+                    <!-- PageSecure Icon -->
+                    <ImageView
+                        android:id="@+id/pageSecure"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Secure"
+                        android:src="@drawable/baseline_auto_awesome_24" />
+
+                    <!-- TextView for Domain Display -->
+                    <TextView
+                        android:id="@+id/addressTextView"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:singleLine="true"
+                        android:text="Splash Browser"
+                        android:textSize="16sp" />
+
+                    <ImageView
+                        android:id="@+id/refreshPage"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/baseline_refresh_24" />
+
+                </LinearLayout>
 
             </LinearLayout>
 

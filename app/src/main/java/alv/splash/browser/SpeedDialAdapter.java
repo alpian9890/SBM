@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,11 +18,16 @@ public class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     private static final int VIEW_TYPE_ITEM = 0;
     private static final int VIEW_TYPE_ADD = 1;
     private final Runnable onAddClickListener;
+    private OnItemClickListener onItemClickListener;
     private OnItemLongClickListener onItemLongClickListener;
 
     // Interface untuk mendengarkan event tekan lama pada item
     public interface OnItemLongClickListener {
         void onItemLongClick(SpeedDialItem item, int position);
+    }
+    // Interface untuk mendengarkan event klik pada item
+    public interface OnItemClickListener {
+        void onItemClick(SpeedDialItem item);
     }
 
     // Konstruktor untuk adapter
@@ -29,11 +35,14 @@ public class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         this.items = new ArrayList<>(items);
         this.onAddClickListener = onAddClickListener;
     }
-
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.onItemClickListener = listener;
+    }
     // Menetapkan listener untuk tekan lama
     public void setOnItemLongClickListener(OnItemLongClickListener listener) {
         this.onItemLongClickListener = listener;
     }
+
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -44,7 +53,7 @@ public class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         } else {
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_speed_dial, parent, false);
-            return new ItemViewHolder(view, onItemLongClickListener);  // Tambahkan listener untuk item
+            return new ItemViewHolder(view, onItemClickListener, onItemLongClickListener);  // Tambahkan listener untuk item
         }
     }
 
@@ -77,8 +86,6 @@ public class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         notifyItemChanged(position);
     }
 
-
-
     public List<SpeedDialItem> getItems() {
         return new ArrayList<>(items);
     }
@@ -94,10 +101,16 @@ public class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         ImageView iconView;
         TextView titleView;
 
-        ItemViewHolder(View itemView, OnItemLongClickListener longClickListener) {
+        ItemViewHolder(View itemView, OnItemClickListener clickListener, OnItemLongClickListener longClickListener) {
             super(itemView);
             iconView = itemView.findViewById(R.id.gambarHalaman);
             titleView = itemView.findViewById(R.id.judulHalaman);
+
+            itemView.setOnClickListener(v -> {
+                if (clickListener != null) {
+                    clickListener.onItemClick((SpeedDialItem) itemView.getTag());
+                }
+            });
 
             // Menambahkan listener untuk event tekan lama pada item
             itemView.setOnLongClickListener(v -> {

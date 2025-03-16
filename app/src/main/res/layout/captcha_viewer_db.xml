@@ -20,39 +20,10 @@
             app:cardElevation="2dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="8dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonShowDatabase"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Database Manager"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_marginEnd="4dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonShowCaptcha"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="CAPTCHA Viewer"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_marginStart="4dp" />
-                </LinearLayout>
-
-            <LinearLayout
                 android:layout_gravity="center"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:padding="8dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -62,7 +33,6 @@
                     android:text="Total entries: 0"
                     android:textSize="12sp"
                     android:textColor="#757575"
-                    android:layout_marginTop="4dp"
                     android:gravity="center" />
                 <TextView
                     android:id="@+id/tvShowingItems"
@@ -71,12 +41,10 @@
                     android:text=" | Showing 0 items"
                     android:textSize="12sp"
                     android:textColor="#757575"
-                    android:layout_marginTop="4dp"
                     android:gravity="center" />
 
             </LinearLayout>
 
-            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- RecyclerView for CAPTCHA items -->

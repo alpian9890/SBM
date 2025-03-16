@@ -1,6 +1,7 @@
 package alv.splash.browser;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -24,7 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CaptchaViewHolder extends RecyclerView.ViewHolder {
-    private MainActivity activity;
+    private Context context;
+    private CaptchaViewerFragment fragment;
     private TextView textId;
     private TextView textPath;
     private TextView textLabel;
@@ -33,9 +35,10 @@ public class CaptchaViewHolder extends RecyclerView.ViewHolder {
     private ImageView captchaImageView;
     private MaterialButton buttonEditData;
 
-    public CaptchaViewHolder(MainActivity activity, @NonNull View itemView) {
+    public CaptchaViewHolder(CaptchaViewerFragment fragment, @NonNull View itemView) {
         super(itemView);
-        this.activity = activity;
+        this.fragment = fragment;
+        this.context = fragment.requireContext();
         textId = itemView.findViewById(R.id.textId);
         textPath = itemView.findViewById(R.id.textPath);
         textLabel = itemView.findViewById(R.id.textLabel);
@@ -53,7 +56,7 @@ public class CaptchaViewHolder extends RecyclerView.ViewHolder {
         textTimestamp.setText( entry.getTimestamp());
 
         // Load image and get image info
-        File imageFile = new File(activity.getExternalFilesDir("Datasets") + "/database/" + entry.getImagePath());
+        File imageFile = new File(context.getExternalFilesDir("Datasets") + "/database/" + entry.getImagePath());
         if (imageFile.exists()) {
             Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
             captchaImageView.setImageBitmap(bitmap);
@@ -147,11 +150,11 @@ public class CaptchaViewHolder extends RecyclerView.ViewHolder {
     }
 
     private void showEditDialog(CaptchaDataManager.CaptchaEntry entry) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Edit Entry");
 
         // Set up the input
-        final EditText input = new EditText(activity);
+        final EditText input = new EditText(context);
         input.setText(entry.getLabel());
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
@@ -160,40 +163,53 @@ public class CaptchaViewHolder extends RecyclerView.ViewHolder {
         builder.setPositiveButton("Save", (dialog, which) -> {
             String newLabel = input.getText().toString();
             new Thread(() -> {
-                boolean success = activity.getCaptchaDataManager().updateEntry(entry.getId(), newLabel);
-                activity.runOnUiThread(() -> {
-                    if (success) {
-                        Toast.makeText(activity,
-                                "Updated successfully", Toast.LENGTH_SHORT).show();
-                        activity.loadData(); // Reload data
-                    } else {
-                        Toast.makeText(activity,
-                                "Update failed", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                // Gunakan dataManager dari fragment
+                CaptchaDataManager dataManager = fragment.getCaptchaDataManager();
+                boolean success = dataManager.updateEntry(entry.getId(), newLabel);
+
+                // Safety check untuk lifecycle fragment
+                if (fragment.isAdded()) {
+                    fragment.requireActivity().runOnUiThread(() -> {
+                        if (success) {
+                            Toast.makeText(context,
+                                    "Updated successfully", Toast.LENGTH_SHORT).show();
+                            // Panggil reloadData di fragment, bukan loadData
+                            fragment.reloadData();
+                        } else {
+                            Toast.makeText(context,
+                                    "Update failed", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
             }).start();
         });
 
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
 
         builder.setNeutralButton("Delete", (dialog, which) -> {
-            // Show confirmation dialog
-            new AlertDialog.Builder(activity)
+            // Kode confirmation dialog
+            new AlertDialog.Builder(context)
                     .setTitle("Confirm Delete")
                     .setMessage("Are you sure you want to delete this entry?")
                     .setPositiveButton("Yes", (dialogInterface, i) -> {
                         new Thread(() -> {
-                            boolean success = activity.getCaptchaDataManager().deleteEntry(entry.getId(), entry.getImagePath());
-                            activity.runOnUiThread(() -> {
-                                if (success) {
-                                    Toast.makeText(activity,
-                                            "Deleted successfully", Toast.LENGTH_SHORT).show();
-                                    activity.loadData(); // Reload data
-                                } else {
-                                    Toast.makeText(activity,
-                                            "Delete failed", Toast.LENGTH_SHORT).show();
-                                }
-                            });
+                            // Dapatkan dataManager dari fragment
+                            CaptchaDataManager dataManager = fragment.getCaptchaDataManager();
+                            boolean success = dataManager.deleteEntry(entry.getId(), entry.getImagePath());
+
+                            // Safety check untuk lifecycle fragment
+                            if (fragment.isAdded()) {
+                                fragment.requireActivity().runOnUiThread(() -> {
+                                    if (success) {
+                                        Toast.makeText(context,
+                                                "Deleted successfully", Toast.LENGTH_SHORT).show();
+                                        fragment.reloadData();
+                                    } else {
+                                        Toast.makeText(context,
+                                                "Delete failed", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
                         }).start();
                     })
                     .setNegativeButton("No", null)
@@ -202,4 +218,5 @@ public class CaptchaViewHolder extends RecyclerView.ViewHolder {
 
         builder.show();
     }
+
 }
