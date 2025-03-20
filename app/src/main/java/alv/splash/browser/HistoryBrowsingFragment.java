@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -83,12 +84,14 @@ public class HistoryBrowsingFragment extends Fragment {
                 if (getActivity() instanceof MainActivity) {
                     ((MainActivity) getActivity()).loadUrl(item.getUrl());
                 }
+                Log.d("HistoryBrowsingFragment", "History item clicked: " + item.getUrl());
             }
 
             @Override
             public void onHistoryItemDelete(HistoryItem item) {
                 historyManager.deleteHistoryItem(item.getId());
                 loadHistory();
+                Log.d("HistoryBrowsingFragment", "History item deleted: " + item.getUrl());
             }
         });
         historyRecyclerView.setAdapter(historyAdapter);

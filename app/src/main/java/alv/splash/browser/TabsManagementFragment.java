@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,7 @@ public class TabsManagementFragment extends Fragment implements TabManager.TabCh
             @Override
             public void onTabClick(TabItem tab) {
                 tabManager.setActiveTab(tab);
+                Log.d("TabsManagementFragment", "Tab clicked, ID: " + tab.getId() + ", [URL: " + tab.getUrl() + "], [Title: " + tab.getTitle()+"]");
                 if (getActivity() instanceof MainActivity) {
                     ((MainActivity) getActivity()).showTab(tab);
                 }
@@ -42,6 +44,7 @@ public class TabsManagementFragment extends Fragment implements TabManager.TabCh
             @Override
             public void onTabClose(TabItem tab) {
                 tabManager.closeTab(tab.getId());
+                Log.d("TabsManagementFragment", "Tab closed, ID: " + tab.getId() + ", [URL: " + tab.getUrl() + "], [Title: " + tab.getTitle()+"]");
             }
         });
 

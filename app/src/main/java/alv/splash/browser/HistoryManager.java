@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,20 +40,102 @@ public class HistoryManager {
         dbHelper.close();
     }
 
+    public void updateHistoryTitle(String url, String newTitle) {
+        // Hanya update jika judul baru tidak kosong
+        if (newTitle == null || newTitle.isEmpty()) return;
+
+        open();
+
+        // Cari entri dengan URL yang sama
+        Cursor cursor = database.query(
+                BrowserDatabaseHelper.TABLE_HISTORY,
+                allColumns,
+                BrowserDatabaseHelper.COLUMN_URL + " = ?",
+                new String[] { url },
+                null, null,
+                BrowserDatabaseHelper.COLUMN_TIMESTAMP + " DESC",
+                "1" // Ambil hanya entri terbaru dengan URL ini
+        );
+
+        if (cursor.moveToFirst()) {
+            long id = cursor.getLong(0);
+            String currentTitle = cursor.getString(2);
+
+            // Update judul jika berbeda
+            if (!newTitle.equals(currentTitle)) {
+                ContentValues values = new ContentValues();
+                values.put(BrowserDatabaseHelper.COLUMN_TITLE, newTitle);
+                database.update(
+                        BrowserDatabaseHelper.TABLE_HISTORY,
+                        values,
+                        BrowserDatabaseHelper.COLUMN_ID + " = ?",
+                        new String[] { String.valueOf(id) }
+                );
+            }
+        }
+
+        cursor.close();
+        close();
+    }
+
     public HistoryItem addHistoryItem(HistoryItem item) {
         open();
 
-        ContentValues values = new ContentValues();
-        values.put(BrowserDatabaseHelper.COLUMN_URL, item.getUrl());
-        values.put(BrowserDatabaseHelper.COLUMN_TITLE, item.getTitle());
-        values.put(BrowserDatabaseHelper.COLUMN_TIMESTAMP, item.getTimestamp());
+        String selection = BrowserDatabaseHelper.COLUMN_URL + " = ?";
+        String[] selectionArgs = new String[]{item.getUrl()};
+        Cursor cursor = database.query(BrowserDatabaseHelper.TABLE_HISTORY,
+                allColumns, selection, selectionArgs, null, null, null);
 
-        long insertId = database.insert(BrowserDatabaseHelper.TABLE_HISTORY, null, values);
-        item.setId(insertId);
+        long id;
+        if (cursor.moveToFirst()) {
+            int titleColumnIndex = cursor.getColumnIndex(BrowserDatabaseHelper.COLUMN_TITLE);
+            int idColumnIndex = cursor.getColumnIndex(BrowserDatabaseHelper.COLUMN_ID);
 
+            // Pengecekan apakah kolom ditemukan
+            if (titleColumnIndex != -1 && idColumnIndex != -1) {
+                String existingTitle = cursor.getString(titleColumnIndex);
+                id = cursor.getLong(idColumnIndex);
+
+                if (!existingTitle.equals(item.getTitle())) {
+                    ContentValues values = new ContentValues();
+                    values.put(BrowserDatabaseHelper.COLUMN_URL, item.getUrl());
+                    values.put(BrowserDatabaseHelper.COLUMN_TITLE, item.getTitle());
+                    values.put(BrowserDatabaseHelper.COLUMN_TIMESTAMP, item.getTimestamp());
+                    id = database.insert(BrowserDatabaseHelper.TABLE_HISTORY, null, values);
+                    item.setId(id);
+                } else {
+                    ContentValues values = new ContentValues();
+                    values.put(BrowserDatabaseHelper.COLUMN_TIMESTAMP, item.getTimestamp());
+                    database.update(BrowserDatabaseHelper.TABLE_HISTORY, values,
+                            BrowserDatabaseHelper.COLUMN_ID + " = ?",
+                            new String[]{String.valueOf(id)});
+                    item.setId(id);
+                }
+            } else {
+                // Kolom tidak ditemukan, tangani kesalahan sesuai kebutuhan
+                // Contoh: log error atau buat entri baru
+                Log.e("DatabaseError", "Kolom tidak ditemukan dalam hasil kueri.");
+                ContentValues values = new ContentValues();
+                values.put(BrowserDatabaseHelper.COLUMN_URL, item.getUrl());
+                values.put(BrowserDatabaseHelper.COLUMN_TITLE, item.getTitle());
+                values.put(BrowserDatabaseHelper.COLUMN_TIMESTAMP, item.getTimestamp());
+                id = database.insert(BrowserDatabaseHelper.TABLE_HISTORY, null, values);
+                item.setId(id);
+            }
+        } else {
+            ContentValues values = new ContentValues();
+            values.put(BrowserDatabaseHelper.COLUMN_URL, item.getUrl());
+            values.put(BrowserDatabaseHelper.COLUMN_TITLE, item.getTitle());
+            values.put(BrowserDatabaseHelper.COLUMN_TIMESTAMP, item.getTimestamp());
+            id = database.insert(BrowserDatabaseHelper.TABLE_HISTORY, null, values);
+            item.setId(id);
+        }
+
+        cursor.close();
         close();
         return item;
     }
+
 
     public void deleteHistoryItem(long id) {
         open();

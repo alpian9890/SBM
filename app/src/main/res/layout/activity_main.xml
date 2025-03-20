@@ -17,6 +17,7 @@
             android:layout_height="match_parent"
             android:gravity="bottom">
 
+            <!-- FrameLayout untuk Homepage dan geckoview -->
             <FrameLayout
                 android:id="@+id/fMainContainer"
                 android:layout_width="match_parent"
@@ -27,9 +28,10 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical">
 
-                <!-- toolbar lauout -->
+                <!-- toolbar/addressbar layout -->
                 <include layout="@layout/address_bar" />
 
+                <!-- FrameLayout untuk menampilkan tabs management, bookmarks, history, downloads, settings, etc-->
                 <FrameLayout
                     android:id="@+id/fragmentSubContent"
                     android:layout_marginTop="5dp"

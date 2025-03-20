@@ -47,7 +47,12 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -72,19 +77,19 @@ public class MainActivity extends AppCompatActivity {
     NavigationView navigationView;
 
     SlidingUpPanelLayout slidingLayout;
-
     private AddressBarUtils addressBarUtils;
+
 
     private TextInputEditText editAddressBar;
 
     private TabManager tabManager;
+    private Map<String, Fragment> fragmentCache = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-
 
         // Inisialisasi SharedPreferences
         preferences = getSharedPreferences(APP_PREFERENCES, MODE_PRIVATE);
@@ -125,40 +130,75 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-		if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fMainContainer,
-                            new HomeFragment())
-                    .commit();
-
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragmentSubContent,
-                            new CaptchaViewerFragment())
-                    .commit();
-        }
-        replaceFragment(new HomeFragment());
+       // replaceFragment(new HomeFragment());
 
         initializeAddressBar();
         initializeSubToolbar();
 
         tabManager = TabManager.getInstance();
+        Log.d("MainActivity", "TabManager initialized");
         tabManager.addTabChangeListener(new TabManager.TabChangeListener() {
             @Override
             public void onTabsChanged() {
-                // Update tabs UI if needed
-            }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    // Handle tab removal for Android 9 (API level 28) and above
+                    List<TabItem> currentTabs = tabManager.getAllTabs();
+                    Set<String> currentTabIds = currentTabs.stream().map(TabItem::getId).collect(Collectors.toSet());
+                    // Remove fragments for tabs that no longer exist
+                    new ArrayList<>(fragmentCache.keySet()).forEach(tabId -> {
+                        if (!currentTabIds.contains(tabId)) {
+                            onTabClosed(tabId);
+                        }
+                    });
+                } else {
+                    List<TabItem> currentTabs = tabManager.getAllTabs();
+                            Set<String> currentTabIds = new HashSet<>();
 
+                    // Mengganti stream().map().collect(Collectors.toSet())
+                    for (TabItem tab : currentTabs) {
+                        currentTabIds.add(tab.getId());
+                    }
+
+                    // Mengganti forEach()
+                    List<String> tabsToRemove = new ArrayList<>();
+                    for (String tabId : fragmentCache.keySet()) {
+                        if (!currentTabIds.contains(tabId)) {
+                            tabsToRemove.add(tabId);
+                        }
+                    }
+
+                    for (String tabId : tabsToRemove) {
+                        onTabClosed(tabId);
+                    }
+                }
+            }
             @Override
             public void onActiveTabChanged(TabItem tab) {
                 if (tab != null) {
                     showTab(tab);
                 }
+                Log.d("MainActivity", "Active tab changed to: " + (tab != null ? tab.getId() : "null"));
             }
-        });
 
-        // If no tabs exist, create a home tab
-        if (tabManager.getAllTabs().isEmpty()) {
-            createNewTab("about:home");
+        });
+		
+		if (savedInstanceState == null) {
+            /*getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fMainContainer,
+                            new HomeFragment())
+                    .commit();*/
+
+			// If no tabs exist, create a home tab
+			if (tabManager != null && tabManager.getAllTabs().isEmpty()) {
+                createNewTab("about:home");
+                showTab(tabManager.getActiveTab());
+                Log.d("MainActivity", "No tabs exist, creating home tab");
+            }
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentSubContent,
+                            new TabsManagementFragment())
+                    .commit();
         }
 
 
@@ -314,10 +354,14 @@ public class MainActivity extends AppCompatActivity {
     public void updateAddressBarInfo(String title, boolean isSecure) {
         addressBarUtils.updatePageInfo(title, isSecure);
     }
+    public void updateEditText(String query) {
+        editAddressBar.setText(query);
+    }
     private void openWebGecko(String query) {
         String processedUrl = new UrlValidator().processInput(query);
         loadUrl(processedUrl);
         addressBarUtils.collapseAddressBar();
+        slidePanelCollapse();
     }
 
     private void initializeAddressBar() {
@@ -372,6 +416,8 @@ public class MainActivity extends AppCompatActivity {
 
                 openWebGecko(editAddressBar.getText().toString());
                 hideKeyboard(editAddressBar);
+                slidePanelCollapse();
+                Log.d("MainActivity", "EditText, IME_ACTION_GO clicked");
                 return true;
 
             }
@@ -396,6 +442,8 @@ public class MainActivity extends AppCompatActivity {
                 mainDrawer.openDrawer(GravityCompat.START); // Buka Navigation Drawer di sisi kiri
             }
             addressBarUtils.collapseAddressBar();
+            slidePanelCollapse();
+            Log.d("MainActivity", "Menu button clicked");
         });
 
 
@@ -403,7 +451,7 @@ public class MainActivity extends AppCompatActivity {
         btnHome.setOnClickListener(v -> {
 
             // Handle home click
-
+            Log.d("MainActivity", "Home button clicked");
             addressBarUtils.collapseAddressBar();
 
         });
@@ -412,10 +460,12 @@ public class MainActivity extends AppCompatActivity {
 
         btnAddTab.setOnClickListener(v -> {
             createNewTab("about:home");
+            Log.d("MainActivity", "Add Tab button clicked");
         });
 
         btnTabs.setOnClickListener(v -> {
             loadFragment(new TabsManagementFragment());
+            Log.d("MainActivity", "Tabs button clicked");
         });
     }
 
@@ -467,6 +517,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void slidePanelCollapse() {
+        slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+    }
+
     private void loadFragment(Fragment fragment) {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragmentSubContent, fragment)
@@ -502,31 +556,63 @@ public class MainActivity extends AppCompatActivity {
 
     public void createNewTab(String url) {
         TabItem newTab = tabManager.addTab(url);
-        if (url.equals("about:home")) {
-            // Show home page
-            replaceFragment(new HomeFragment());
-            addressBarUtils.updatePageInfo("Start browsing", true);
-        } else {
-            // Show browser page
-            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(newTab.getId(), url);
-            replaceFragment(geckoViewFragment);
-        }
+
+        showTab(newTab);
+
+        // Update tab counter if needed
+        // You might want to add a tab counter in your UI
+
+        Log.d("MainActivity", "New tab created with ID: " + newTab.getId());
     }
 
     public void showTab(TabItem tab) {
         tabManager.setActiveTab(tab);
-        if (tab.getUrl().equals("about:home")) {
-            replaceFragment(new HomeFragment());
-            addressBarUtils.updatePageInfo("Start browsing", true);
-        } else {
-            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(tab.getId(), tab.getUrl());
-            replaceFragment(geckoViewFragment);
-            addressBarUtils.updatePageInfo(tab.getTitle(), true);
+        Fragment fragment = fragmentCache.get(tab.getId());
+        if (fragment == null) {
+            if (tab.getUrl().equals("about:home")) {
+                fragment = new HomeFragment();
+            } else {
+                fragment = GeckoViewFragment.newInstance(tab.getId(), tab.getUrl());
+            }
+            fragmentCache.put(tab.getId(), fragment);
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.fMainContainer, fragment, tab.getId())
+                    .hide(fragment)
+                    .commit();
         }
 
-        // Collapse the sliding panel if it's expanded
-        if (slidingLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
-            slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+        // Hide all other fragments and show the current one
+        Fragment currentFragment = getCurrentFragment();
+        if (currentFragment != null) {
+            getSupportFragmentManager().beginTransaction()
+                    .hide(currentFragment)
+                    .show(fragment)
+                    .commit();
+        } else {
+            getSupportFragmentManager().beginTransaction()
+                    .show(fragment)
+                    .commit();
+        }
+
+        // Update UI
+        if (tab.getUrl().equals("about:home")) {
+            addressBarUtils.updatePageInfo("Start browsing", true);
+        } else {
+            addressBarUtils.updatePageInfo(tab.getTitle(), true);
+        }
+        slidePanelCollapse();
+    }
+
+    private Fragment getCurrentFragment() {
+        return getSupportFragmentManager().findFragmentById(R.id.fMainContainer);
+    }
+
+    public void onTabClosed(String tabId) {
+        Fragment fragment = fragmentCache.remove(tabId);
+        if (fragment != null) {
+            getSupportFragmentManager().beginTransaction()
+                    .remove(fragment)
+                    .commit();
         }
     }
 
@@ -551,6 +637,7 @@ public class MainActivity extends AppCompatActivity {
             GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(activeTab.getId(), url);
             replaceFragment(geckoViewFragment);
         }
+        slidePanelCollapse();
     }
 
     private void setupStorage() {

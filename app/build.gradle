@@ -19,8 +19,8 @@ android {
         applicationId "alv.splash.browser"
         minSdk 21
         targetSdk 35
-        versionCode 10
-        versionName "Edelweiss 10.9.6"
+        versionCode 11
+        versionName "Edelweiss 11.3.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
@@ -79,6 +79,7 @@ dependencies {
 	implementation 'com.squareup.okhttp3:okhttp:4.9.3'
 
     implementation 'com.github.bumptech.glide:glide:4.16.0'
+	annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
 
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'net.objecthunter:exp4j:0.4.8'

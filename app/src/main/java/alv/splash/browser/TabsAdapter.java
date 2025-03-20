@@ -1,5 +1,6 @@
 package alv.splash.browser;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
+
+import android.graphics.drawable.Drawable;
+import androidx.core.content.ContextCompat;
 
 import java.util.List;
 
@@ -57,7 +61,8 @@ public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.TabViewHolder>
         private TextView url;
         private ImageButton closeButton;
         private CardView tabCard;
-
+        private Drawable active_tab = ContextCompat.getDrawable(itemView.getContext(), R.drawable.cosmic_gradient_bg3);
+        private Drawable inactive_tab = ContextCompat.getDrawable(itemView.getContext(), R.drawable.cosmic_gradient_bg);
         public TabViewHolder(@NonNull View itemView) {
             super(itemView);
             favicon = itemView.findViewById(R.id.tab_favicon);
@@ -73,27 +78,31 @@ public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.TabViewHolder>
 
             if (tab.getFavicon() != null) {
                 favicon.setImageBitmap(tab.getFavicon());
+                Log.d("TabsAdapter", "Favicon loaded for URL: " + tab.getUrl());
             } else {
-                favicon.setImageResource(R.drawable.ic_globe_32); // Default icon
+                favicon.setImageResource(R.drawable.ic_globe_32);
+                Log.d("TabsAdapter", "No favicon found for URL: " + tab.getUrl());
             }
 
             // Highlight active tab
             if (tab.isActive()) {
-                tabCard.setCardBackgroundColor(itemView.getContext().getResources().getColor(R.color.teal_blue));
+                tabCard.setBackground(active_tab);
             } else {
-                tabCard.setCardBackgroundColor(itemView.getContext().getResources().getColor(R.color.secondary_text));
+                tabCard.setBackground(inactive_tab);
             }
 
             tabCard.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onTabClick(tab);
                 }
+                Log.d("TabsAdapter", "onTabClick " + (listener != null ? " Listener berfungsi" : " Listener null"));
             });
 
             closeButton.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onTabClose(tab);
                 }
+                Log.d("TabsAdapter", "onTabClose " + (listener != null ? " Listener berfungsi" : " Listener null"));
             });
         }
     }
