@@ -1,4 +1,4 @@
-package alv.splash.browser;
+package alv.splash.browser.ui.adapter;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -16,6 +16,9 @@ import android.graphics.drawable.Drawable;
 import androidx.core.content.ContextCompat;
 
 import java.util.List;
+
+import alv.splash.browser.R;
+import alv.splash.browser.model.TabItem;
 
 public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.TabViewHolder> {
     private List<TabItem> tabs;

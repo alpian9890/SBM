@@ -1,4 +1,4 @@
-package alv.splash.browser;
+package alv.splash.browser.ui.fragment;
 
 import android.app.DownloadManager;
 import android.content.ClipData;
@@ -29,6 +29,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import org.mozilla.geckoview.AllowOrDeny;
@@ -40,7 +41,23 @@ import org.mozilla.geckoview.GeckoSessionSettings;
 import org.mozilla.geckoview.GeckoView;
 import org.mozilla.geckoview.WebResponse;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import alv.splash.browser.BookmarkManager;
+import alv.splash.browser.CosmicExplorer;
+import alv.splash.browser.GlideFaviconFetcher;
+import alv.splash.browser.HistoryItem;
+import alv.splash.browser.HistoryManager;
+import alv.splash.browser.LoginCredential;
+import alv.splash.browser.MainActivity;
+import alv.splash.browser.PasswordManager;
+import alv.splash.browser.R;
+import alv.splash.browser.TabManager;
+import alv.splash.browser.UrlValidator;
+import alv.splash.browser.util.GeckoSessionPool;
+import alv.splash.browser.viewmodel.TabViewModel;
 
 public class GeckoViewFragment extends Fragment {
     private String tabId;
@@ -62,7 +79,13 @@ public class GeckoViewFragment extends Fragment {
     private PopupMenu contextMenu;
     private BookmarkManager bookmarkManager;
     private PasswordManager passwordManager;
-    private HistoryItem historyItem;
+    private TabViewModel tabViewModel;
+    private boolean isSessionInitialized = false;
+    private static final String TAG = "GeckoViewFragment";
+
+    // Singleton pool untuk GeckoSession
+    private static final Map<String, GeckoSession> sessionPool = new HashMap<>();
+
 
     public static GeckoViewFragment newInstance(String tabId, String url) {
         GeckoViewFragment fragment = new GeckoViewFragment();
@@ -77,6 +100,10 @@ public class GeckoViewFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Dapatkan ViewModel dari activity
+        tabViewModel = new ViewModelProvider(requireActivity()).get(TabViewModel.class);
+
         if (getArguments() != null) {
             tabId = getArguments().getString("tabId");
             initialUrl = getArguments().getString("url");
@@ -87,8 +114,15 @@ public class GeckoViewFragment extends Fragment {
         if (savedInstanceState != null) {
             tabId = savedInstanceState.getString("tabId");
             initialUrl = savedInstanceState.getString("url");
-
+            sessionState = savedInstanceState.getParcelable(BUNDLE_KEY);
         }
+        if (savedInstanceState != null) {
+            tabId = savedInstanceState.getString("tabId");
+            initialUrl = savedInstanceState.getString("url");
+            sessionState = savedInstanceState.getParcelable(BUNDLE_KEY);
+        }
+
+        Log.d(TAG, "onCreate() for tab: " + tabId);
     }
 
     @Override
@@ -114,20 +148,7 @@ public class GeckoViewFragment extends Fragment {
         setupContextMenu();
     }
 
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        // Save session state
-        if (session != null) {
-            outState.putParcelable(BUNDLE_KEY, sessionState);
-            Log.d("GeckoViewFragment", "Saving session state");
-        }
-        outState.putString("tabId", tabId);
-        outState.putString("url", initialUrl);
-    }
-
     private void setupGeckoSession() {
-        // Get the GeckoRuntime singleton from the Application
         GeckoRuntime runtime = CosmicExplorer.getGeckoRuntime(requireContext());
         if (runtime == null) {
             Log.e("GeckoViewFragment", "Failed to get GeckoRuntime - cannot continue");
@@ -135,48 +156,86 @@ public class GeckoViewFragment extends Fragment {
             return;
         }
 
-        if (session != null) {
-            Log.d("GeckoViewFragment", "Session already exists");
-            return;
-        }
-
-        if (sessionState != null) {
-            GeckoSessionSettings settings = CosmicExplorer.getInstance().getTabProfile(tabId);
-            session = new GeckoSession(settings);
-            session.restoreState(sessionState);
-            Log.d("GeckoViewFragment", "Session restored from state: " + sessionState);
+        // Cek apakah session sudah ada di pool
+        boolean sessionExists = GeckoSessionPool.getInstance().hasSession(tabId);
+        if (sessionExists) {
+            // Gunakan session yang sudah ada dari pool
+            session = GeckoSessionPool.getInstance().getSession(tabId, runtime);
+            Log.d(TAG, "Reusing existing session from pool for tab: " + tabId);
         } else {
-
-            // Get profile for this tab
+            // Buat session baru
             GeckoSessionSettings settings = CosmicExplorer.getInstance().getTabProfile(tabId);
 
-            // Create a new session with the appropriate settings
-            session = new GeckoSession(settings);
+            if (sessionState != null) {
+                // Restore dari state yang disimpan
+                session = new GeckoSession(settings);
+                session.restoreState(sessionState);
+                Log.d(TAG, "Created session from saved state for tab: " + tabId);
+            } else {
+                // Buat session baru dari awal
+                session = new GeckoSession(settings);
+                Log.d(TAG, "Created brand new session for tab: " + tabId);
+            }
 
-            session.setProgressDelegate(new ProgressDelegate());
-            session.setContentDelegate(new ContentDelegate());
-            session.setNavigationDelegate(new NavigationDelegate());
-            session.setContentBlockingDelegate(new ContentBlockingDelegate());
-            session.setPromptDelegate(new PromptDelegate());
-            session.setHistoryDelegate(new HistoryDelegate());
-            Log.d("GeckoViewFragment", "Session created & All Delegates set");
+            // Setup delegates sebelum menyimpan ke pool
+            setupSessionDelegates();
+
+            // Tambahkan ke pool untuk penggunaan selanjutnya
+            GeckoSessionPool.getInstance().putSession(tabId, session);
+
+            // Buka session jika belum dibuka
+            if (!session.isOpen()) {
+                try {
+                    session.open(runtime);
+                    Log.d(TAG, "Opened new session for tab: " + tabId);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error opening session: " + e.getMessage(), e);
+                }
+            }
         }
 
-        try {
-            if (!session.isOpen()){
-                session.open(runtime);
-                Log.d("GeckoViewFragment", "!isOpen() then Session opened" + " Tab ID: " + tabId + " Session: " + session);
-            }
-            geckoView.setSession(session);
-            geckoView.setSaveEnabled(true);
-            if (initialUrl != null && !initialUrl.isEmpty()) {
-                loadUrl(initialUrl);
-                Log.d("GeckoViewFragment", "Initial URL loaded: " + initialUrl + " Tab ID: " + tabId + " Session: " + session);
-            }
-        } catch (Exception e) {
-            Log.e("GeckoViewFragment", "Error opening GeckoSession", e);
-            Toast.makeText(requireContext(), "Failed to initialize browser tab", Toast.LENGTH_SHORT).show();
+        // Pasang session ke view
+        geckoView.setSession(session);
+        geckoView.setSaveEnabled(true);
+        isSessionInitialized = true;
+
+        // Load URL awal jika ada dan session baru dibuat (bukan reused)
+        if (initialUrl != null && !initialUrl.isEmpty() && !sessionExists) {
+            loadUrl(initialUrl);
+            Log.d(TAG, "Initial URL loaded: " + initialUrl + " for tab: " + tabId);
         }
+    }
+
+    private void setupSessionDelegates() {
+        // Set up all delegates
+        session.setProgressDelegate(new ProgressDelegate());
+        session.setContentDelegate(new ContentDelegate());
+        session.setNavigationDelegate(new NavigationDelegate());
+        session.setContentBlockingDelegate(new ContentBlockingDelegate());
+        session.setPromptDelegate(new PromptDelegate());
+        session.setHistoryDelegate(new HistoryDelegate());
+
+        Log.d("GeckoViewFragment", "All delegates set for tab: " + tabId);
+    }
+
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        if (session != null) {
+            try {
+                // Save session state
+                outState.putParcelable(BUNDLE_KEY, sessionState);
+
+                Log.d("GeckoViewFragment", "Saved session state for tab: " + tabId);
+            } catch (Exception e) {
+                Log.e("GeckoViewFragment", "Error saving session state: " + e.getMessage(), e);
+            }
+        }
+
+        outState.putString("tabId", tabId);
+        outState.putString("url", initialUrl);
     }
 
     private void setupContextMenu() {
@@ -331,6 +390,10 @@ public class GeckoViewFragment extends Fragment {
         if (title != null && !title.isEmpty()) {
             HistoryItem item = new HistoryItem(url, title, System.currentTimeMillis());
             historyManager.updateHistoryTitle(url, title);
+            Log.d("GeckoViewFragment",
+                    "History title updated: " + item.getUrl() +
+                            "Title: " + item.getTitle() +
+                            " Timestamp: " + item.getTimestamp());
         }
     }
 
@@ -367,7 +430,13 @@ public class GeckoViewFragment extends Fragment {
     public void onPause() {
         super.onPause();
         if (session != null) {
-            session.setActive(false);
+            try {
+                // When pausing, make the session inactive but keep it in memory
+                session.setActive(false);
+                Log.d("GeckoViewFragment", "Session set inactive for tab: " + tabId);
+            } catch (Exception e) {
+                Log.e("GeckoViewFragment", "Error deactivating session: " + e.getMessage(), e);
+            }
         }
     }
 
@@ -375,18 +444,41 @@ public class GeckoViewFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (session != null) {
-            session.setActive(true);
+            try {
+                // When resuming, reactivate the session
+                session.setActive(true);
+                Log.d("GeckoViewFragment", "Session set active for tab: " + tabId);
+            } catch (Exception e) {
+                Log.e("GeckoViewFragment", "Error activating session: " + e.getMessage(), e);
+            }
         }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        // Important: Don't close the session here anymore, as we're reusing sessions
+        // Just keep it in the pool for later reuse
+
+        // We only want to close sessions when the tab is actually closed
+        // This is now handled in closeTab() in TabViewModel via tabEventLiveData
+
+        Log.d("GeckoViewFragment", "onDestroy() called for tab: " + tabId + ", leaving session in pool for reuse");
+    }
+
+    /**
+     * Method to be called when the tab is actually closed
+     * This should be called from the TabViewModel when a tab is removed
+     */
+    public static void closeSession(String tabId) {
+        GeckoSession session = sessionPool.remove(tabId);
         if (session != null) {
             try {
                 session.close();
+                Log.d("GeckoViewFragment", "Session closed and removed from pool for tab: " + tabId);
             } catch (Exception e) {
-                Log.e("GeckoViewFragment", "Error closing session", e);
+                Log.e("GeckoViewFragment", "Error closing session for tab: " + tabId, e);
             }
         }
     }
@@ -402,8 +494,14 @@ public class GeckoViewFragment extends Fragment {
         public void onPageStart(GeckoSession session, String url) {
             currentUrl = url;
             updateEditText(currentUrl);
+
+            // Notify ViewModel that page is loading
+            tabViewModel.setLoading(true);
+
+            // Update tab info in TabViewModel
             String fetchDomain = Uri.parse(currentUrl != null && !currentUrl.isEmpty() ? currentUrl : "https://google.com").getHost();
             if (fetchDomain == null) fetchDomain = "google.com";
+
             String finalFetchDomain = fetchDomain;
             GlideFaviconFetcher.fetchFavicon(requireContext(), fetchDomain, new GlideFaviconFetcher.FaviconCallback() {
                 @Override
@@ -411,15 +509,16 @@ public class GeckoViewFragment extends Fragment {
                     favicon = bitmap;
                     if (isAdded()) {
                         new Handler(Looper.getMainLooper()).post(() -> {
-                            TabManager.getInstance().updateTabInfo(tabId, pageTitle, currentUrl, favicon);
+                            tabViewModel.updateTabInfo(tabId, pageTitle, currentUrl, favicon);
                         });
                     }
                 }
+
                 @Override
                 public void onError(Exception e) {
                     if (isAdded()) {
                         new Handler(Looper.getMainLooper()).post(() -> {
-                            TabManager.getInstance().updateTabInfo(tabId, pageTitle, currentUrl, null);
+                            tabViewModel.updateTabInfo(tabId, pageTitle, currentUrl, null);
                         });
                     }
                 }
@@ -428,10 +527,17 @@ public class GeckoViewFragment extends Fragment {
 
         @Override
         public void onPageStop(GeckoSession session, boolean success) {
-            // Page loading completed
+            // Notify ViewModel that page finished loading
+            tabViewModel.setLoading(false);
+
+            // Update tab info
             new Handler(Looper.getMainLooper()).post(() -> {
-                TabManager.getInstance().updateTabInfo(tabId, pageTitle, currentUrl, favicon);
+                tabViewModel.updateTabInfo(tabId, pageTitle, currentUrl, favicon);
             });
+
+            if (success) {
+                saveToHistory(currentUrl, pageTitle);
+            }
         }
 
         @Override

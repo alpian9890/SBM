@@ -21,6 +21,14 @@
             android:layout_weight="1" />
 
         <Button
+        android:id="@+id/btnCloseAllTabs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Close All"
+        android:drawableStart="@drawable/ic_add"
+        android:drawablePadding="4dp" />
+
+        <Button
             android:id="@+id/btnAddNewTab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

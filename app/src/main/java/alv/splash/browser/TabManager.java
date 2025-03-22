@@ -2,15 +2,24 @@ package alv.splash.browser;
 
 import android.graphics.Bitmap;
 import android.util.Log;
+
+import androidx.lifecycle.LifecycleOwner;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import alv.splash.browser.model.TabItem;
+import alv.splash.browser.util.GeckoSessionPool;
+import alv.splash.browser.viewmodel.TabViewModel;
 
+/**
+ * Kelas singleton yang bertindak sebagai adapter antara kode lama
+ * dan TabViewModel baru untuk transisi ke MVVM
+ */
 public class TabManager {
     private static TabManager instance;
-    private List<TabItem> tabs;
-    private TabItem activeTab;
-    private List<TabChangeListener> listeners;
+    private TabViewModel viewModel;
+    private List<TabChangeListener> listeners = new ArrayList<>();
     private static final String TAG = "TabManager";
 
     public interface TabChangeListener {
@@ -19,8 +28,7 @@ public class TabManager {
     }
 
     private TabManager() {
-        tabs = new ArrayList<>();
-        listeners = new ArrayList<>();
+        // Kosong karena viewModel harus di-set dari luar
     }
 
     public static synchronized TabManager getInstance() {
@@ -30,134 +38,134 @@ public class TabManager {
         return instance;
     }
 
-    public TabItem addTab(String url) {
-        TabItem newTab = new TabItem(url);
-        tabs.add(newTab);
-        setActiveTab(newTab);
-        notifyTabsChanged();
-        Log.d(TAG, "New tab added: " + newTab.getId());
-        return newTab;
-    }
+    /**
+     * Mengatur ViewModel yang akan digunakan
+     */
+    public void setViewModel(TabViewModel viewModel, LifecycleOwner lifecycleOwner) {
+        this.viewModel = viewModel;
 
-    public void closeTab(String tabId) {
-        Log.d(TAG, "Closing tab: " + tabId);
-
-        // Find tab to remove
-        TabItem tabToRemove = null;
-        int tabIndex = -1;
-
-        for (int i = 0; i < tabs.size(); i++) {
-            TabItem tab = tabs.get(i);
-            if (tab.getId().equals(tabId)) {
-                tabToRemove = tab;
-                tabIndex = i;
-                break;
-            }
-        }
-
-        if (tabToRemove != null) {
-            boolean wasActive = tabToRemove.isActive();
-
-            // Clean up tab resources
-            if (CosmicExplorer.getInstance().isProfileModeEnabled()) {
-                CosmicExplorer.getInstance().clearTabProfile(tabId);
-            }
-
-            // Remove tab
-            tabs.remove(tabToRemove);
-
-            // Ensure we always have at least one tab
-            if (tabs.isEmpty()) {
-                TabItem homeTab = addTab("about:home");
-                setActiveTab(homeTab);
-                Log.d(TAG, "Created new home tab as all tabs were closed");
-            } else if (wasActive) {
-                // Select the closest tab
-                int newIndex = Math.min(tabIndex, tabs.size() - 1);
-                setActiveTab(tabs.get(newIndex));
-                Log.d(TAG, "Set active tab to: " + tabs.get(newIndex).getId());
-            }
-
+        // Observasi LiveData untuk perubahan daftar tab
+        viewModel.getTabs().observe(lifecycleOwner, tabs -> {
             notifyTabsChanged();
-        } else {
-            Log.w(TAG, "Attempted to close non-existent tab: " + tabId);
-        }
-    }
+        });
 
-    public void setActiveTab(TabItem tab) {
-        if (tab == null) {
-            Log.w(TAG, "Attempted to set null tab as active");
-            return;
-        }
+        // Observasi LiveData untuk perubahan tab aktif
+        viewModel.getActiveTab().observe(lifecycleOwner, tab -> {
+            notifyActiveTabChanged(tab);
+        });
 
-        if (activeTab != null && activeTab.getId().equals(tab.getId())) {
-            Log.d(TAG, "Tab already active: " + tab.getId());
-            return;
-        }
-
-        // Deactivate current active tab
-        if (activeTab != null) {
-            activeTab.setActive(false);
-        }
-
-        // Find and activate the requested tab
-        for (TabItem t : tabs) {
-            if (t.getId().equals(tab.getId())) {
-                t.setActive(true);
-                activeTab = t;
-                Log.d(TAG, "Active tab set to: " + activeTab.getId());
-                break;
+        // Observasi LiveData untuk peristiwa tab
+        viewModel.getTabEvents().observe(lifecycleOwner, event -> {
+            if (event.getType() == TabViewModel.TabEventType.CLOSED) {
+                TabItem closedTab = (TabItem) event.getData();
+                // Tutup GeckoSession untuk tab yang ditutup
+                GeckoSessionPool.getInstance().closeSession(closedTab.getId());
+            } else if (event.getType() == TabViewModel.TabEventType.ALL_CLOSED) {
+                // Tutup semua GeckoSession
+                GeckoSessionPool.getInstance().closeAllSessions();
             }
-        }
+        });
 
-        notifyActiveTabChanged();
+        Log.d(TAG, "ViewModel set and observers registered");
     }
 
-    public TabItem getActiveTab() {
-        return activeTab;
-    }
-
-    public List<TabItem> getAllTabs() {
-        return new ArrayList<>(tabs);
-    }
-
+    /**
+     * Mendaftarkan listener untuk perubahan tab
+     */
     public void addTabChangeListener(TabChangeListener listener) {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
         }
     }
 
+    /**
+     * Menghapus listener perubahan tab
+     */
     public void removeTabChangeListener(TabChangeListener listener) {
         listeners.remove(listener);
     }
 
+    /**
+     * Membuat tab baru
+     */
+    public TabItem addTab(String url) {
+        checkViewModel();
+        return viewModel.addTab(url);
+    }
+
+    /**
+     * Menutup tab berdasarkan ID
+     */
+    public void closeTab(String tabId) {
+        checkViewModel();
+        viewModel.closeTab(tabId);
+    }
+
+    /**
+     * Menutup semua tab
+     */
+    public void closeAllTabs() {
+        checkViewModel();
+        viewModel.closeAllTabs();
+    }
+
+    /**
+     * Mengatur tab aktif
+     */
+    public void setActiveTab(TabItem tab) {
+        checkViewModel();
+        viewModel.setActiveTab(tab);
+    }
+
+    /**
+     * Mendapatkan tab aktif
+     */
+    public TabItem getActiveTab() {
+        checkViewModel();
+        return viewModel.getActiveTab().getValue();
+    }
+
+    /**
+     * Mendapatkan semua tab
+     */
+    public List<TabItem> getAllTabs() {
+        checkViewModel();
+        List<TabItem> tabs = viewModel.getTabs().getValue();
+        return tabs != null ? new ArrayList<>(tabs) : new ArrayList<>();
+    }
+
+    /**
+     * Memperbarui informasi tab
+     */
+    public void updateTabInfo(String tabId, String title, String url, Bitmap favicon) {
+        checkViewModel();
+        viewModel.updateTabInfo(tabId, title, url, favicon);
+    }
+
+    /**
+     * Memeriksa apakah ViewModel telah diinisialisasi
+     */
+    private void checkViewModel() {
+        if (viewModel == null) {
+            throw new IllegalStateException("TabViewModel not initialized. Call setViewModel first.");
+        }
+    }
+
+    /**
+     * Mengirim notifikasi tentang perubahan daftar tab
+     */
     private void notifyTabsChanged() {
         for (TabChangeListener listener : listeners) {
             listener.onTabsChanged();
         }
     }
 
-    private void notifyActiveTabChanged() {
+    /**
+     * Mengirim notifikasi tentang perubahan tab aktif
+     */
+    private void notifyActiveTabChanged(TabItem tab) {
         for (TabChangeListener listener : listeners) {
-            listener.onActiveTabChanged(activeTab);
+            listener.onActiveTabChanged(tab);
         }
-    }
-
-    public void updateTabInfo(String tabId, String title, String url, Bitmap favicon) {
-        for (TabItem tab : tabs) {
-            if (tab.getId().equals(tabId)) {
-                if (title != null && !title.isEmpty()) {
-                    tab.setTitle(title);
-                }
-                if (url != null) {
-                    tab.setUrl(url);
-                }
-                if (favicon != null) {
-                    tab.setFavicon(favicon);
-                }
-                break;
-            }
-        }
-        notifyTabsChanged();
     }
 }

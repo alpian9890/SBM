@@ -11,18 +11,14 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,21 +34,22 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+
+import alv.splash.browser.model.TabItem;
+import alv.splash.browser.ui.fragment.GeckoViewFragment;
+import alv.splash.browser.ui.fragment.HomeFragment;
+import alv.splash.browser.ui.fragment.TabsManagementFragment;
+import alv.splash.browser.util.GeckoSessionPool;
+import alv.splash.browser.viewmodel.TabViewModel;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -83,7 +80,10 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText editAddressBar;
 
     private TabManager tabManager;
+    private TabViewModel tabViewModel;
     private Map<String, Fragment> fragmentCache = new HashMap<>();
+    private FragmentManager fragmentManager;
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,214 +109,137 @@ public class MainActivity extends AppCompatActivity {
         slidingLayout = findViewById(R.id.sliding_layout);
         fMainContainer = findViewById(R.id.fMainContainer);
 
-        slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
-
-        slidingLayout.addPanelSlideListener(new SlidingUpPanelLayout.PanelSlideListener() {
-            @Override
-            public void onPanelSlide(View panel, float slideOffset) {
-                // Anda bisa menambahkan logika tambahan di sini jika diperlukan
-            }
-
-            @Override
-            public void onPanelStateChanged(View panel, SlidingUpPanelLayout.PanelState previousState, SlidingUpPanelLayout.PanelState newState) {
-
-            }
-        });
-
-        slidingLayout.setFadeOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
-            }
-        });
-
-       // replaceFragment(new HomeFragment());
+        setupSlidingPanel();
 
         initializeAddressBar();
         initializeSubToolbar();
 
+        // Inisialisasi FragmentManager
+        fragmentManager = getSupportFragmentManager();
+
+        // Inisialisasi ViewModel
+        tabViewModel = new ViewModelProvider(this).get(TabViewModel.class);
+
+        // Konfigurasi TabManager untuk menggunakan ViewModel
         tabManager = TabManager.getInstance();
-        Log.d("MainActivity", "TabManager initialized");
-        tabManager.addTabChangeListener(new TabManager.TabChangeListener() {
-            @Override
-            public void onTabsChanged() {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    // Handle tab removal for Android 9 (API level 28) and above
-                    List<TabItem> currentTabs = tabManager.getAllTabs();
-                    Set<String> currentTabIds = currentTabs.stream().map(TabItem::getId).collect(Collectors.toSet());
-                    // Remove fragments for tabs that no longer exist
-                    new ArrayList<>(fragmentCache.keySet()).forEach(tabId -> {
-                        if (!currentTabIds.contains(tabId)) {
-                            onTabClosed(tabId);
-                        }
-                    });
-                } else {
-                    List<TabItem> currentTabs = tabManager.getAllTabs();
-                            Set<String> currentTabIds = new HashSet<>();
-
-                    // Mengganti stream().map().collect(Collectors.toSet())
-                    for (TabItem tab : currentTabs) {
-                        currentTabIds.add(tab.getId());
-                    }
-
-                    // Mengganti forEach()
-                    List<String> tabsToRemove = new ArrayList<>();
-                    for (String tabId : fragmentCache.keySet()) {
-                        if (!currentTabIds.contains(tabId)) {
-                            tabsToRemove.add(tabId);
-                        }
-                    }
-
-                    for (String tabId : tabsToRemove) {
-                        onTabClosed(tabId);
-                    }
-                }
-            }
-            @Override
-            public void onActiveTabChanged(TabItem tab) {
-                if (tab != null) {
-                    showTab(tab);
-                }
-                Log.d("MainActivity", "Active tab changed to: " + (tab != null ? tab.getId() : "null"));
-            }
-
-        });
-		
-		if (savedInstanceState == null) {
-            /*getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fMainContainer,
-                            new HomeFragment())
-                    .commit();*/
-
-			// If no tabs exist, create a home tab
-			if (tabManager != null && tabManager.getAllTabs().isEmpty()) {
+        tabManager.setViewModel(tabViewModel, this);
+        // Observasi perubahan tab
+        setupTabObservers();
+        // Cek apakah ada tab yang perlu dibuat
+        if (savedInstanceState == null) {
+            // Cek apakah ada tab yang sudah ada
+            List<TabItem> existingTabs = tabViewModel.getTabs().getValue();
+            if (existingTabs == null || existingTabs.isEmpty()) {
                 createNewTab("about:home");
-                showTab(tabManager.getActiveTab());
-                Log.d("MainActivity", "No tabs exist, creating home tab");
+                Log.d(TAG, "Created initial home tab");
+            } else {
+                showTab(tabViewModel.getActiveTab().getValue());
+                Log.d(TAG, "Showing existing active tab");
             }
 
+            // Tampilkan fragment manajemen tab
             getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragmentSubContent,
-                            new TabsManagementFragment())
+                    .replace(R.id.fragmentSubContent, new TabsManagementFragment())
                     .commit();
         }
 
 
-        /*
-        // Set listener untuk item menu
-        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+    }//akhir onCreate
+
+    /**
+     * Mengatur observer untuk LiveData dalam TabViewModel
+     */
+    private void setupTabObservers() {
+        // Observer untuk daftar tab
+        tabViewModel.getTabs().observe(this, tabs -> {
+            Log.d(TAG, "Tab list updated: " + (tabs != null ? tabs.size() : 0) + " tabs");
+        });
+
+        // Observer untuk tab aktif
+        tabViewModel.getActiveTab().observe(this, tab -> {
+            if (tab != null) {
+                Log.d(TAG, "Active tab changed to: " + tab.getId() + ", URL: " + tab.getUrl());
+            }
+        });
+
+        // Observer untuk loading state
+        tabViewModel.getIsLoading().observe(this, isLoading -> {
+            // Anda bisa menampilkan indikator loading di sini jika diinginkan
+            Log.d(TAG, "Loading state changed to: " + isLoading);
+        });
+
+        // Observer untuk peristiwa tab
+        tabViewModel.getTabEvents().observe(this, event -> {
+            switch (event.getType()) {
+                case ADDED:
+                    TabItem newTab = (TabItem) event.getData();
+                    Log.d(TAG, "Tab added event: " + newTab.getId());
+                    // No additional action needed here as the tab is already added to the ViewModel
+                    break;
+
+                case CLOSED:
+                    TabItem closedTab = (TabItem) event.getData();
+                    onTabClosed(closedTab.getId());
+                    Log.d(TAG, "Tab closed event: " + closedTab.getId());
+                    break;
+
+                case ALL_CLOSED:
+                    // Hapus semua fragment dari cache
+                    for (String tabId : new HashMap<>(fragmentCache).keySet()) {
+                        onTabClosed(tabId);
+                    }
+                    Log.d(TAG, "All tabs closed event");
+                    break;
+
+                case ACTIVE_CHANGED:
+                    TabItem activeTab = (TabItem) event.getData();
+                    // showTab will be called by TabManager.onActiveTabChanged
+                    Log.d(TAG, "Active tab changed event: " + activeTab.getId());
+                    break;
+
+                case UPDATED:
+                    TabItem updatedTab = (TabItem) event.getData();
+                    // Update address bar if this is the active tab
+                    if (updatedTab.isActive()) {
+                        updateAddressBarInfo(updatedTab.getTitle(), true); // Assuming secure for now
+                    }
+                    Log.d(TAG, "Tab updated event: " + updatedTab.getId());
+                    break;
+            }
+        });
+    }
+
+    /**
+     * Setup untuk sliding panel (implementasi tetap sama seperti sebelumnya)
+     */
+    private void setupSlidingPanel() {
+        slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+        slidingLayout.addPanelSlideListener(new SlidingUpPanelLayout.PanelSlideListener() {
+            @Override
+            public void onPanelSlide(View panel, float slideOffset) {
+            }
 
             @Override
-            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                int id = item.getItemId();
-
-                if (id == R.id.start_working) {
-                    // Handle start working
-                    Intent intent = new Intent(MainActivity.this, StartWorking.class);
-                    startActivity(intent);
-                    finish();
-                }
-                else if (id == R.id.music_player) {
-                    // Handle music player
-                    String url = "https://music.youtube.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.suno_AI) {
-                    String url = "https://suno.ai";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.vidiodotcom) {
-                    String url = "https://www.vidio.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.webLK21) {
-                    String url = "https://lk21.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.open_AI) {
-                    String url = "https://chat.openai.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.googleColab) {
-                    String url = "https://colab.google.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.workercashweb) {
-                    String url = "https://worker.cash";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.workDuaTab) {
-                    // Handle 2 tab work
-                   // startActivity(new Intent(this, DuaTabActivity.class));
-                }
-                // Survey Panel items
-                else if (id == R.id.surveytime) {
-                    String url = "https://surveytime.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.ysense) {
-                    String url = "https://ysense.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.grabpoints) {
-                    String url = "https://grabpoints.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.grapedata) {
-                    String url = "https://grapedata.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.primeopinion) {
-                    String url = "https://primeopinion.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.opinionworld) {
-                    String url = "https://opinionworld.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.lootupsurvey) {
-                    String url = "https://lootup.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.surveylama) {
-                    String url = "https://surveylama.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.surveyon) {
-                    String url = "https://surveyon.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.lifepoints) {
-                    String url = "https://lifepoints.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.toluna) {
-                    String url = "https://toluna.com";
-                    openWebGecko(url);
-                }
-                else if (id == R.id.drawer_logout) {
-                    // Handle logout
-                    logout();
-                }
-
-                mainDrawer.closeDrawer(GravityCompat.START);
-                return true;
+            public void onPanelStateChanged(View panel, SlidingUpPanelLayout.PanelState previousState, SlidingUpPanelLayout.PanelState newState) {
             }
+        });
 
+        slidingLayout.setFadeOnClickListener(view -> {
+            slidingLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+        });
+    }
 
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d("MainActivity", "Saving instance state");
+    }
 
-            // Method untuk logout
-            private void logout() {
-                // Implement logout logic here
-                finish();
-            }
-
-        });*/
-
-
-
-
-    }//akhir onCreate
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        Log.d("MainActivity", "Restoring instance state");
+    }
 
     @Override
     public void onBackPressed() {
@@ -554,89 +477,181 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void createNewTab(String url) {
-        TabItem newTab = tabManager.addTab(url);
-
-        showTab(newTab);
-
-        // Update tab counter if needed
-        // You might want to add a tab counter in your UI
-
-        Log.d("MainActivity", "New tab created with ID: " + newTab.getId());
-    }
-
+    // Metode showTab yang diperbarui
     public void showTab(TabItem tab) {
-        tabManager.setActiveTab(tab);
+        if (tab == null) {
+            Log.e(TAG, "Trying to show null tab");
+            return;
+        }
+
+        Log.d(TAG, "Showing tab: " + tab.getId() + ", URL: " + tab.getUrl());
+
+        // Pastikan tab ini disetel sebagai tab aktif di ViewModel
+        tabViewModel.setActiveTab(tab);
+
+        // Cari fragment di cache berdasarkan ID tab
         Fragment fragment = fragmentCache.get(tab.getId());
+
         if (fragment == null) {
+            // Fragment tidak ditemukan dalam cache, buat fragment baru
             if (tab.getUrl().equals("about:home")) {
                 fragment = new HomeFragment();
+                Log.d(TAG, "Created new HomeFragment for tab: " + tab.getId());
             } else {
                 fragment = GeckoViewFragment.newInstance(tab.getId(), tab.getUrl());
+                Log.d(TAG, "Created new GeckoViewFragment for tab: " + tab.getId());
             }
+
+            // Tambahkan ke cache
             fragmentCache.put(tab.getId(), fragment);
-            getSupportFragmentManager().beginTransaction()
+
+            // Tambahkan ke FragmentManager dalam keadaan tersembunyi
+            fragmentManager.beginTransaction()
                     .add(R.id.fMainContainer, fragment, tab.getId())
                     .hide(fragment)
-                    .commit();
-        }
+                    .commitNow();
 
-        // Hide all other fragments and show the current one
-        Fragment currentFragment = getCurrentFragment();
-        if (currentFragment != null) {
-            getSupportFragmentManager().beginTransaction()
-                    .hide(currentFragment)
-                    .show(fragment)
-                    .commit();
+            Log.d(TAG, "Added new fragment to FragmentManager: " + tab.getId());
         } else {
-            getSupportFragmentManager().beginTransaction()
-                    .show(fragment)
-                    .commit();
+            Log.d(TAG, "Found fragment in cache: " + tab.getId());
+
+            // Periksa apakah fragment sudah ada di FragmentManager
+            Fragment existingFragment = fragmentManager.findFragmentByTag(tab.getId());
+            if (existingFragment == null) {
+                // Jika tidak ada di FragmentManager, tambahkan kembali
+                fragmentManager.beginTransaction()
+                        .add(R.id.fMainContainer, fragment, tab.getId())
+                        .hide(fragment)
+                        .commitNow();
+
+                Log.d(TAG, "Re-added cached fragment to FragmentManager: " + tab.getId());
+            }
         }
 
-        // Update UI
+        // Cari fragment yang saat ini ditampilkan
+        Fragment currentVisibleFragment = getCurrentVisibleFragment();
+
+        // Jika fragment yang terlihat berbeda dari yang ingin ditampilkan
+        if (currentVisibleFragment != null && currentVisibleFragment != fragment) {
+            Log.d(TAG,
+                    "Hiding current visible fragment: " + currentVisibleFragment.getClass().getSimpleName() +
+                            ", Tag: " + currentVisibleFragment.getTag());
+
+            // Sembunyikan fragment saat ini dan tampilkan fragment yang baru
+            fragmentManager.beginTransaction()
+                    .hide(currentVisibleFragment)
+                    .show(fragment)
+                    .commitNow();
+
+            Log.d(TAG, "Showed fragment: " + fragment.getClass().getSimpleName() + ", Tag: " + tab.getId());
+        } else if (currentVisibleFragment == null) {
+            // Tidak ada fragment yang terlihat, tampilkan fragment baru
+            fragmentManager.beginTransaction()
+                    .show(fragment)
+                    .commitNow();
+
+            Log.d(TAG, "No visible fragment, showed: " + fragment.getClass().getSimpleName());
+        } else {
+            // Fragment yang ingin ditampilkan sudah terlihat
+            Log.d(TAG, "Fragment already visible: " + fragment.getClass().getSimpleName());
+        }
+
+        // Update address bar
         if (tab.getUrl().equals("about:home")) {
             addressBarUtils.updatePageInfo("Start browsing", true);
         } else {
             addressBarUtils.updatePageInfo(tab.getTitle(), true);
         }
+
         slidePanelCollapse();
     }
 
-    private Fragment getCurrentFragment() {
-        return getSupportFragmentManager().findFragmentById(R.id.fMainContainer);
+    // Metode untuk mencari fragment yang saat ini terlihat
+    private Fragment getCurrentVisibleFragment() {
+        List<Fragment> fragments = fragmentManager.getFragments();
+        for (Fragment fragment : fragments) {
+            if (fragment != null && fragment.isVisible() &&
+                    fragment.getId() == R.id.fMainContainer) {
+                return fragment;
+            }
+        }
+        return null;
     }
 
+    // Metode getCurrentFragment yang diperbarui
+    private Fragment getCurrentFragment() {
+        // Coba cari fragment yang visible terlebih dahulu
+        Fragment visibleFragment = getCurrentVisibleFragment();
+        if (visibleFragment != null) {
+            return visibleFragment;
+        }
+
+        // Coba cari berdasarkan tab yang aktif
+        TabItem activeTab = tabViewModel.getActiveTab().getValue();
+        if (activeTab != null) {
+            Fragment fragment = fragmentManager.findFragmentByTag(activeTab.getId());
+            if (fragment != null) {
+                return fragment;
+            }
+        }
+
+        // Fallback ke metode original
+        return fragmentManager.findFragmentById(R.id.fMainContainer);
+    }
+
+    // Metode onTabClosed yang diperbarui
     public void onTabClosed(String tabId) {
         Fragment fragment = fragmentCache.remove(tabId);
         if (fragment != null) {
-            getSupportFragmentManager().beginTransaction()
-                    .remove(fragment)
-                    .commit();
+            // Pastikan fragment dihapus dari FragmentManager
+            try {
+                fragmentManager.beginTransaction()
+                        .remove(fragment)
+                        .commitNow();
+                Log.d(TAG, "Removed fragment for tab: " + tabId);
+            } catch (Exception e) {
+                Log.e(TAG, "Error removing fragment: " + e.getMessage(), e);
+            }
         }
     }
 
-    public void loadUrl(String url) {
-        TabItem activeTab = tabManager.getActiveTab();
+    // Metode createNewTab yang diperbarui
+    public void createNewTab(String url) {
+        TabItem newTab = tabViewModel.addTab(url);
+        Log.d(TAG, "New tab created with ID: " + newTab.getId());
+        // TabManager.onActiveTabChanged akan memanggil showTab
+    }
 
+    // Metode loadUrl yang diperbarui
+    public void loadUrl(String url) {
+        TabItem activeTab = tabViewModel.getActiveTab().getValue();
         if (activeTab == null) {
-            // If no active tab, create a new one
             createNewTab(url);
             return;
         }
 
-        // Get the current fragment
-        Fragment currentFragment = getSupportFragmentManager()
-                .findFragmentById(R.id.fMainContainer);
-
+        Fragment currentFragment = getCurrentFragment();
         if (currentFragment instanceof GeckoViewFragment) {
-            // If GeckoViewFragment is already showing, just load the URL
             ((GeckoViewFragment) currentFragment).loadUrl(url);
+
+            // Update URL di TabViewModel
+            tabViewModel.updateTabInfo(activeTab.getId(), activeTab.getTitle(), url, activeTab.getFavicon());
         } else {
-            // Otherwise replace with a new GeckoViewFragment
+            // Jika tab saat ini adalah HomeFragment, ganti dengan GeckoViewFragment
             GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(activeTab.getId(), url);
-            replaceFragment(geckoViewFragment);
+
+            // Update fragment di cache
+            fragmentCache.put(activeTab.getId(), geckoViewFragment);
+
+            // Ganti fragment
+            fragmentManager.beginTransaction()
+                    .replace(R.id.fMainContainer, geckoViewFragment, activeTab.getId())
+                    .commitNow();
+
+            // Update URL di TabViewModel
+            tabViewModel.updateTabInfo(activeTab.getId(), activeTab.getTitle(), url, activeTab.getFavicon());
         }
+
         slidePanelCollapse();
     }
 
@@ -859,6 +874,13 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         if (captchaDataManager != null) {
             captchaDataManager.close();
+        }
+        // Cleanup jika Activity benar-benar dihancurkan (bukan karena konfigurasi)
+        if (isFinishing()) {
+            // Tutup semua GeckoSession untuk mencegah memory leak
+            GeckoSessionPool.getInstance().closeAllSessions();
+
+            Log.d(TAG, "Activity finishing, closed all sessions");
         }
     }
 

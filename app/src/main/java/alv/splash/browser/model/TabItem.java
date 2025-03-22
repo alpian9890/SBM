@@ -1,4 +1,4 @@
-package alv.splash.browser;
+package alv.splash.browser.model;
 
 import android.graphics.Bitmap;
 

@@ -1,4 +1,4 @@
-package alv.splash.browser;
+package alv.splash.browser.ui.fragment;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -13,7 +13,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -24,8 +23,12 @@ import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 
-import java.util.ArrayList;
 import java.util.List;
+
+import alv.splash.browser.MainActivity;
+import alv.splash.browser.R;
+import alv.splash.browser.SpeedDialAdapter;
+import alv.splash.browser.SpeedDialItem;
 
 
 /**
