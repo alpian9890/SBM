@@ -87,13 +87,14 @@ public class GeckoViewFragment extends Fragment {
     private static final Map<String, GeckoSession> sessionPool = new HashMap<>();
 
 
-    public static GeckoViewFragment newInstance(String tabId, String url) {
+    public static GeckoViewFragment newInstance(String tabId, String url, boolean isRestored) {
         GeckoViewFragment fragment = new GeckoViewFragment();
         Bundle args = new Bundle();
         args.putString("tabId", tabId);
         args.putString("url", url);
+        args.putBoolean("isRestored", isRestored);
         fragment.setArguments(args);
-        Log.d("GeckoViewFragment", "newInstance() called with tabId: " + tabId + ", url: " + url);
+        Log.d(TAG, "newInstance() called with tabId: " + tabId + ", url: " + url + ", isRestored: " + isRestored);
         return fragment;
     }
 
@@ -104,10 +105,13 @@ public class GeckoViewFragment extends Fragment {
         // Dapatkan ViewModel dari activity
         tabViewModel = new ViewModelProvider(requireActivity()).get(TabViewModel.class);
 
+        boolean isRestored = false;
         if (getArguments() != null) {
             tabId = getArguments().getString("tabId");
             initialUrl = getArguments().getString("url");
+            isRestored = getArguments().getBoolean("isRestored", false);
         }
+
         historyManager = HistoryManager.getInstance(requireContext());
         bookmarkManager = BookmarkManager.getInstance(requireContext());
         passwordManager = PasswordManager.getInstance(requireContext());
@@ -123,6 +127,9 @@ public class GeckoViewFragment extends Fragment {
         }
 
         Log.d(TAG, "onCreate() for tab: " + tabId);
+        if (isRestored) {
+            Log.d(TAG, "Tab is being restored: " + tabId + ", URL: " + initialUrl);
+        }
     }
 
     @Override
@@ -187,7 +194,20 @@ public class GeckoViewFragment extends Fragment {
             if (!session.isOpen()) {
                 try {
                     session.open(runtime);
-                    Log.d(TAG, "Opened new session for tab: " + tabId);
+                    Log.d(TAG, "Opened session for tab: " + tabId);
+
+                    // Jika ini tab yang dipulihkan dan URL bukan about:home,
+                    // kita perlu memuat ulang URL setelah session dibuka
+                    boolean isRestored = getArguments() != null &&
+                            getArguments().getBoolean("isRestored", false);
+
+                    if (isRestored && initialUrl != null && !initialUrl.equals("about:home")) {
+                        // Untuk tab yang dipulihkan, selalu muat ulang URL untuk memastikan konten benar
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            loadUrl(initialUrl);
+                            Log.d(TAG, "Reloading URL for restored tab: " + initialUrl);
+                        }, 100); // Sedikit delay untuk memastikan session siap
+                    }
                 } catch (Exception e) {
                     Log.e(TAG, "Error opening session: " + e.getMessage(), e);
                 }
@@ -426,6 +446,29 @@ public class GeckoViewFragment extends Fragment {
         return currentUrl;
     }
 
+    /**
+     * Memperbarui dan mengaktifkan ulang session saat aplikasi di-resume
+     * untuk memastikan tampilan visual sinkron dengan state
+     */
+    public void refreshSession() {
+        if (session != null) {
+            try {
+                // Pastikan session aktif
+                session.setActive(true);
+
+                // Langkah penting: Force refresh tampilan GeckoView
+                geckoView.releaseSession();
+                geckoView.setSession(session);
+
+                // Log status untuk debugging
+                Log.d(TAG, "GeckoView session refreshed for tab: " + tabId
+                        + ", URL: " + currentUrl);
+            } catch (Exception e) {
+                Log.e(TAG, "Error refreshing session: " + e.getMessage(), e);
+            }
+        }
+    }
+
     @Override
     public void onPause() {
         super.onPause();
@@ -445,11 +488,26 @@ public class GeckoViewFragment extends Fragment {
         super.onResume();
         if (session != null) {
             try {
-                // When resuming, reactivate the session
+                // Aktifkan session
                 session.setActive(true);
-                Log.d("GeckoViewFragment", "Session set active for tab: " + tabId);
+
+                // Periksa apakah ini fragment yang terlihat
+                if (isVisible()) {
+                    // Refresh tampilan visual
+                    geckoView.releaseSession();
+                    geckoView.setSession(session);
+
+                    // Pastikan URL/judul ditampilkan dengan benar
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).updateAddressBarInfo(pageTitle, pageSecure);
+                    }
+
+                    Log.d(TAG, "Session activated and refreshed for visible tab: " + tabId);
+                } else {
+                    Log.d(TAG, "Session activated for non-visible tab: " + tabId);
+                }
             } catch (Exception e) {
-                Log.e("GeckoViewFragment", "Error activating session: " + e.getMessage(), e);
+                Log.e(TAG, "Error activating session: " + e.getMessage(), e);
             }
         }
     }

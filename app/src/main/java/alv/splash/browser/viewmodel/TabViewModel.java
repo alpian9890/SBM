@@ -14,12 +14,15 @@ import java.util.List;
 
 import alv.splash.browser.CosmicExplorer;
 import alv.splash.browser.model.TabItem;
+import alv.splash.browser.util.TabStorage;
 
 /**
  * ViewModel untuk mengelola data tab browser dan status terkait
  */
 public class TabViewModel extends AndroidViewModel {
     private static final String TAG = "TabViewModel";
+
+    private TabStorage tabStorage;
 
     // LiveData untuk daftar tab
     private final MutableLiveData<List<TabItem>> tabsLiveData = new MutableLiveData<>(new ArrayList<>());
@@ -35,7 +38,72 @@ public class TabViewModel extends AndroidViewModel {
 
     public TabViewModel(@NonNull Application application) {
         super(application);
-        Log.d(TAG, "TabViewModel initialized");
+        tabStorage = new TabStorage(application);
+
+        // Coba pulihkan tab saat ViewModel dibuat
+        restoreSavedTabs();
+
+        Log.d(TAG, "TabViewModel initialized with tab storage");
+    }
+
+    /**
+     * Menyimpan state tab saat ini ke penyimpanan
+     */
+    public void saveTabState() {
+        List<TabItem> tabs = getCurrentTabs();
+
+        if (tabs.isEmpty()) {
+            Log.d(TAG, "No tabs to save");
+            return;
+        }
+
+        TabItem activeTab = activeTabLiveData.getValue();
+        String activeTabId = activeTab != null ? activeTab.getId() : "";
+
+        tabStorage.saveTabs(tabs, activeTabId);
+        Log.d(TAG, "Saved " + tabs.size() + " tabs to storage");
+    }
+
+    /**
+     * Memulihkan tab yang disimpan dari penyimpanan
+     */
+    public void restoreSavedTabs() {
+        // Pulihkan tab dari penyimpanan
+        List<TabItem> savedTabs = tabStorage.restoreTabs();
+
+        if (savedTabs.isEmpty()) {
+            Log.d(TAG, "No saved tabs to restore");
+            return;
+        }
+
+        // Setel tab yang dipulihkan ke LiveData
+        tabsLiveData.setValue(savedTabs);
+
+        // Pulihkan tab aktif
+        String activeTabId = tabStorage.restoreActiveTabId();
+        if (!activeTabId.isEmpty()) {
+            for (TabItem tab : savedTabs) {
+                if (tab.getId().equals(activeTabId)) {
+                    tab.setActive(true);
+                    activeTabLiveData.setValue(tab);
+
+                    // Beri tahu observer tentang tab yang dipulihkan
+                    tabEventLiveData.setValue(new TabEvent(TabEventType.RESTORED, savedTabs));
+
+                    Log.d(TAG, "Restored active tab: " + tab.getId() + ", URL: " + tab.getUrl());
+                    break;
+                }
+            }
+        } else if (!savedTabs.isEmpty()) {
+            // Jika tidak ada tab aktif yang disimpan, aktifkan tab pertama
+            TabItem firstTab = savedTabs.get(0);
+            firstTab.setActive(true);
+            activeTabLiveData.setValue(firstTab);
+
+            Log.d(TAG, "No active tab found, activated first tab: " + firstTab.getId());
+        }
+
+        Log.d(TAG, "Restored " + savedTabs.size() + " tabs from storage");
     }
 
     /**
@@ -268,7 +336,8 @@ public class TabViewModel extends AndroidViewModel {
         CLOSED,
         ALL_CLOSED,
         ACTIVE_CHANGED,
-        UPDATED
+        UPDATED,
+        RESTORED
     }
 
     /**

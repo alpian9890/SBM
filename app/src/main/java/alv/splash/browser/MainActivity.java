@@ -127,14 +127,31 @@ public class MainActivity extends AppCompatActivity {
         setupTabObservers();
         // Cek apakah ada tab yang perlu dibuat
         if (savedInstanceState == null) {
-            // Cek apakah ada tab yang sudah ada
+            // Cek apakah ada tab yang dimuat dari penyimpanan
             List<TabItem> existingTabs = tabViewModel.getTabs().getValue();
+            // Ada tab yang dipulihkan, tampilkan tab aktif
+            TabItem activeTab = tabViewModel.getActiveTab().getValue();
+
             if (existingTabs == null || existingTabs.isEmpty()) {
+                // Tidak ada tab yang dipulihkan, buat tab home baru
                 createNewTab("about:home");
-                Log.d(TAG, "Created initial home tab");
+                if (activeTab != null) {
+                    showTab(activeTab);
+                    Log.d(TAG, "No saved tabs, created new home tab");
+                }
+                Log.d(TAG, "No saved tabs, created initial home tab");
             } else {
-                showTab(tabViewModel.getActiveTab().getValue());
-                Log.d(TAG, "Showing existing active tab");
+                if (activeTab != null) {
+                    showTab(activeTab);
+                    Log.d(TAG, "Showing restored active tab: " + activeTab.getId());
+                } else {
+                    // Jika tidak ada tab aktif, buat tab home baru
+                    createNewTab("about:home");
+                    if (activeTab != null) {
+                        showTab(activeTab);
+                    }
+                    Log.d(TAG, "No active tab, created new home tab");
+                }
             }
 
             // Tampilkan fragment manajemen tab
@@ -204,6 +221,21 @@ public class MainActivity extends AppCompatActivity {
                         updateAddressBarInfo(updatedTab.getTitle(), true); // Assuming secure for now
                     }
                     Log.d(TAG, "Tab updated event: " + updatedTab.getId());
+                    break;
+
+                case RESTORED:
+                    // Ketika tab dipulihkan, perbarui fragmentCache
+                    List<TabItem> restoredTabs = (List<TabItem>) event.getData();
+                    Log.d(TAG, "Tab restore event with " + restoredTabs.size() + " tabs");
+
+                    // Bersihkan cache fragment lama
+                    fragmentCache.clear();
+
+                    // Tampilkan tab aktif jika ada
+                    TabItem activeTabRestored = tabViewModel.getActiveTab().getValue();
+                    if (activeTabRestored != null) {
+                        showTab(activeTabRestored);
+                    }
                     break;
             }
         });
@@ -493,13 +525,18 @@ public class MainActivity extends AppCompatActivity {
         Fragment fragment = fragmentCache.get(tab.getId());
 
         if (fragment == null) {
+
+            boolean isRestoredTab = tabViewModel.getTabEvents().getValue() != null &&
+                    tabViewModel.getTabEvents().getValue().getType() == TabViewModel.TabEventType.RESTORED;
+
             // Fragment tidak ditemukan dalam cache, buat fragment baru
             if (tab.getUrl().equals("about:home")) {
                 fragment = new HomeFragment();
                 Log.d(TAG, "Created new HomeFragment for tab: " + tab.getId());
             } else {
-                fragment = GeckoViewFragment.newInstance(tab.getId(), tab.getUrl());
-                Log.d(TAG, "Created new GeckoViewFragment for tab: " + tab.getId());
+                fragment = GeckoViewFragment.newInstance(tab.getId(), tab.getUrl(), isRestoredTab);
+                Log.d(TAG, "Created new GeckoViewFragment for tab: " + tab.getId() + ", isRestored: " + isRestoredTab);
+
             }
 
             // Tambahkan ke cache
@@ -637,8 +674,11 @@ public class MainActivity extends AppCompatActivity {
             // Update URL di TabViewModel
             tabViewModel.updateTabInfo(activeTab.getId(), activeTab.getTitle(), url, activeTab.getFavicon());
         } else {
+
+            boolean isRestoredTab = tabViewModel.getTabEvents().getValue() != null &&
+                    tabViewModel.getTabEvents().getValue().getType() == TabViewModel.TabEventType.RESTORED;
             // Jika tab saat ini adalah HomeFragment, ganti dengan GeckoViewFragment
-            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(activeTab.getId(), url);
+            GeckoViewFragment geckoViewFragment = GeckoViewFragment.newInstance(activeTab.getId(), url, isRestoredTab);
 
             // Update fragment di cache
             fragmentCache.put(activeTab.getId(), geckoViewFragment);
@@ -866,9 +906,39 @@ public class MainActivity extends AppCompatActivity {
 
 
     @Override
-    public void onResume() {
+    protected void onResume() {
         super.onResume();
+        Log.d(TAG, "MainActivity onResume called");
+
+        // Refresh tab aktif untuk memastikan UI sinkron dengan state
+        TabItem activeTab = tabViewModel.getActiveTab().getValue();
+        if (activeTab != null) {
+            // Dapatkan fragment dari cache
+            Fragment fragment = fragmentCache.get(activeTab.getId());
+
+            // Jika fragment adalah GeckoViewFragment, pastikan session aktif
+            if (fragment instanceof GeckoViewFragment) {
+                // Pastikan fragment terlihat dan sesi aktif
+                ((GeckoViewFragment) fragment).refreshSession();
+
+                // Perbarui tampilan address bar
+                updateAddressBarInfo(activeTab.getTitle(), true);
+
+                Log.d(TAG, "Refreshed active tab session: " + activeTab.getId());
+            }
+        }
     }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        // Simpan status tab ke penyimpanan
+        tabViewModel.saveTabState();
+
+        Log.d(TAG, "Activity stopped, tab state saved");
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
